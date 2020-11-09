@@ -5,11 +5,13 @@ go 1.14
 require (
 	cloud.google.com/go v0.56.0 // indirect
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
+	github.com/FleekHQ/space-daemon v0.0.33
 	github.com/alecthomas/jsonschema v0.0.0-20191017121752-4bb6e3fae4f2
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/caarlos0/spin v1.1.0
 	github.com/cenkalti/backoff/v4 v4.0.2
 	github.com/cloudflare/cloudflare-go v0.11.6
+	github.com/dgraph-io/badger v1.6.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-contrib/location v0.0.2
 	github.com/gin-contrib/static v0.0.0-20191128031702-f81c604d8ac2
@@ -37,7 +39,7 @@ require (
 	github.com/ipfs/go-merkledag v0.3.2
 	github.com/ipfs/go-unixfs v0.2.4
 	github.com/ipfs/interface-go-ipfs-core v0.4.0
-	github.com/jbenet/go-is-domain v1.0.3
+	github.com/jbenet/go-is-domain v1.0.5
 	github.com/jhump/protoreflect v1.7.0
 	github.com/libp2p/go-libp2p-core v0.6.1
 	github.com/libp2p/go-libp2p-gostream v0.2.1 // indirect

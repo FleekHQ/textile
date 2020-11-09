@@ -45,7 +45,9 @@ import (
 	hpb "github.com/textileio/textile/v2/api/hub/pb"
 	"github.com/textileio/textile/v2/api/users"
 	upb "github.com/textileio/textile/v2/api/users/pb"
+	bdb "github.com/textileio/textile/v2/badgerdb"
 	"github.com/textileio/textile/v2/buckets/archive"
+	c "github.com/textileio/textile/v2/collections"
 	"github.com/textileio/textile/v2/dns"
 	"github.com/textileio/textile/v2/email"
 	"github.com/textileio/textile/v2/gateway"
@@ -128,8 +130,7 @@ var (
 )
 
 type Textile struct {
-	collections *mdb.Collections
-
+	collections    c.Collections
 	ts             tc.NetBoostrapper
 	th             *threads.Client
 	thn            *netclient.Client
@@ -153,8 +154,8 @@ type Textile struct {
 }
 
 type Config struct {
-	RepoPath string
-
+	RepoPath         string
+	StorePath        string
 	AddrAPI          ma.Multiaddr
 	AddrAPIProxy     ma.Multiaddr
 	AddrThreadsHost  ma.Multiaddr
@@ -222,11 +223,20 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			return nil, err
 		}
 	}
-	t.collections, err = mdb.NewCollections(ctx, conf.AddrMongoURI, conf.MongoName, conf.Hub)
-	if err != nil {
-		return nil, err
+
+	if conf.Hub {
+		t.collections, err = mdb.NewCollections(ctx, conf.AddrMongoURI, conf.MongoName, conf.Hub)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		t.collections, err = bdb.NewCollections(ctx, conf.StorePath, conf.Hub)
+		if err != nil {
+			return nil, err
+		}
 	}
-	t.ipnsm, err = ipns.NewManager(t.collections.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
+
+	t.ipnsm, err = ipns.NewManager(t.collections.(bdb.Collections).IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
 	if err != nil {
 		return nil, err
 	}
@@ -497,6 +507,9 @@ func (t *Textile) Close(force bool) error {
 	if err := t.collections.Close(); err != nil {
 		return err
 	}
+	if err := t.st.Close(); err != nil {
+		return err
+	}
 	t.ipnsm.Cancel()
 	return nil
 }
@@ -647,7 +660,7 @@ func (t *Textile) noAuthFunc(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
 
-func generatePowUnaryInterceptor(serviceName string, allowedMethods []string, serviceDesc *desc.ServiceDescriptor, stub *grpcdynamic.Stub, pc *powc.Client, c *mdb.Collections) grpc.UnaryServerInterceptor {
+func generatePowUnaryInterceptor(serviceName string, allowedMethods []string, serviceDesc *desc.ServiceDescriptor, stub *grpcdynamic.Stub, pc *powc.Client, c c.Collections) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		methodParts := strings.Split(info.FullMethod, "/")
 		if len(methodParts) != 3 {
