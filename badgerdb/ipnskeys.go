@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/FleekHQ/space-daemon/core/store"
-	c "github.com/FleekHQ/textile/collections"
+	c "github.com/FleekHQ/textile/v2/collections"
 	badger "github.com/dgraph-io/badger"
 	"github.com/textileio/go-threads/core/thread"
 )
