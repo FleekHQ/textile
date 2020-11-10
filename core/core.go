@@ -156,6 +156,7 @@ type Textile struct {
 
 type Config struct {
 	RepoPath string
+	CollectionRepoPath string
 
 	AddrAPI          ma.Multiaddr
 	AddrAPIProxy     ma.Multiaddr
@@ -229,7 +230,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		return nil, err
 	}
 
-	t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithMongoCollectionOpts(conf.AddrMongoURI, conf.MongoName))
+	t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithMongoCollectionOpts(conf.AddrMongoURI, conf.MongoName), collections.WithBadgerCollectionOpts(conf.))
 	if err != nil {
 		return nil, err
 	}
