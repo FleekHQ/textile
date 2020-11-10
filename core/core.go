@@ -46,6 +46,7 @@ import (
 	"github.com/textileio/textile/v2/api/users"
 	upb "github.com/textileio/textile/v2/api/users/pb"
 	"github.com/textileio/textile/v2/buckets/archive"
+	"github.com/textileio/textile/v2/collections"
 	"github.com/textileio/textile/v2/dns"
 	"github.com/textileio/textile/v2/email"
 	"github.com/textileio/textile/v2/gateway"
@@ -128,8 +129,8 @@ var (
 )
 
 type Textile struct {
-	collections *mdb.Collections
-
+	collections    *mdb.Collections
+	gencol         *collections.Collections
 	ts             tc.NetBoostrapper
 	th             *threads.Client
 	thn            *netclient.Client
@@ -226,6 +227,9 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	//overlap: we want 1 object that can do either badger or mongo
+	// t.collections.GetIPNSKeys()
 	t.ipnsm, err = ipns.NewManager(t.collections.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
 	if err != nil {
 		return nil, err
@@ -262,6 +266,9 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 	if err != nil {
 		return nil, err
 	}
+	// same overlap
+	// t.collections.GetBucketArchives
+	// just implement bucket archives if it crashes
 	t.bucks, err = tdb.NewBuckets(t.th, t.powc, t.collections.BucketArchives)
 	if err != nil {
 		return nil, err
@@ -294,6 +301,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			return nil, err
 		}
 		t.emailSessionBus = broadcast.NewBroadcaster(0)
+		// use mongo collection directly
 		hs = &hub.Service{
 			Collections:        t.collections,
 			Threads:            t.th,
@@ -306,18 +314,21 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			IPNSManager:        t.ipnsm,
 			Pow:                t.powc,
 		}
+		// directly
 		us = &users.Service{
 			Collections: t.collections,
 			Mail:        t.mail,
 		}
 	}
 	if conf.Hub {
+		// pass mongo directly
 		t.archiveTracker, err = archive.New(t.collections, t.bucks, t.powc, t.internalHubSession)
 		if err != nil {
 			return nil, err
 		}
 	}
 	t.buckLocks = nutil.NewSemaphorePool(1)
+	// there is a subset of bucketarvices,accoutns,users to create an interface for
 	bs := &buckets.Service{
 		Collections:               t.collections,
 		Buckets:                   t.bucks,
@@ -362,6 +373,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 				return nil, err
 			}
 		}
+		// pass in directly again
 		opts = []grpc.ServerOption{
 			grpcm.WithUnaryServerChain(
 				auth.UnaryServerInterceptor(t.authFunc),
@@ -429,6 +441,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		}
 	}()
 
+	// turn off gateway if !conf.Hub
 	// Configure gateway
 	t.gateway, err = gateway.NewGateway(gateway.Config{
 		Addr:            conf.AddrGatewayHost,
@@ -536,6 +549,7 @@ func (t *Textile) authFunc(ctx context.Context) (context.Context, error) {
 		if sid == t.internalHubSession {
 			return ctx, nil
 		}
+		// use saved mongo collection directly
 		session, err := t.collections.Sessions.Get(ctx, sid)
 		if err != nil {
 			return nil, status.Error(codes.Unauthenticated, "Invalid session")

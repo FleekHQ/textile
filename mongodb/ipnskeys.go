@@ -5,17 +5,11 @@ import (
 	"time"
 
 	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/textile/v2/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-type IPNSKey struct {
-	Name      string
-	Cid       string
-	ThreadID  thread.ID
-	CreatedAt time.Time
-}
 
 type IPNSKeys struct {
 	col *mongo.Collection
@@ -44,7 +38,7 @@ func (k *IPNSKeys) Create(ctx context.Context, name, cid string, threadID thread
 	return err
 }
 
-func (k *IPNSKeys) Get(ctx context.Context, name string) (*IPNSKey, error) {
+func (k *IPNSKeys) Get(ctx context.Context, name string) (*model.IPNSKey, error) {
 	res := k.col.FindOne(ctx, bson.M{"_id": name})
 	if res.Err() != nil {
 		return nil, res.Err()
@@ -56,7 +50,7 @@ func (k *IPNSKeys) Get(ctx context.Context, name string) (*IPNSKey, error) {
 	return decodeIPNSKey(raw)
 }
 
-func (k *IPNSKeys) GetByCid(ctx context.Context, cid string) (*IPNSKey, error) {
+func (k *IPNSKeys) GetByCid(ctx context.Context, cid string) (*model.IPNSKey, error) {
 	res := k.col.FindOne(ctx, bson.M{"cid": cid})
 	if res.Err() != nil {
 		return nil, res.Err()
@@ -68,13 +62,13 @@ func (k *IPNSKeys) GetByCid(ctx context.Context, cid string) (*IPNSKey, error) {
 	return decodeIPNSKey(raw)
 }
 
-func (k *IPNSKeys) ListByThreadID(ctx context.Context, threadID thread.ID) ([]IPNSKey, error) {
+func (k *IPNSKeys) ListByThreadID(ctx context.Context, threadID thread.ID) ([]model.IPNSKey, error) {
 	cursor, err := k.col.Find(ctx, bson.M{"thread_id": threadID.Bytes()})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	var docs []IPNSKey
+	var docs []model.IPNSKey
 	for cursor.Next(ctx) {
 		var raw bson.M
 		if err := cursor.Decode(&raw); err != nil {
@@ -103,7 +97,7 @@ func (k *IPNSKeys) Delete(ctx context.Context, name string) error {
 	return nil
 }
 
-func decodeIPNSKey(raw bson.M) (*IPNSKey, error) {
+func decodeIPNSKey(raw bson.M) (*model.IPNSKey, error) {
 	threadID, err := thread.Cast(raw["thread_id"].(primitive.Binary).Data)
 	if err != nil {
 		return nil, err
@@ -112,7 +106,7 @@ func decodeIPNSKey(raw bson.M) (*IPNSKey, error) {
 	if v, ok := raw["created_at"]; ok {
 		created = v.(primitive.DateTime).Time()
 	}
-	return &IPNSKey{
+	return &model.IPNSKey{
 		Name:      raw["_id"].(string),
 		Cid:       raw["cid"].(string),
 		ThreadID:  threadID,
