@@ -51,6 +51,7 @@ import (
 	"github.com/textileio/textile/v2/email"
 	"github.com/textileio/textile/v2/gateway"
 	"github.com/textileio/textile/v2/ipns"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	tdb "github.com/textileio/textile/v2/threaddb"
 	"github.com/textileio/textile/v2/util"
@@ -437,7 +438,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		}
 	}()
 
-	if conf.hub {
+	if conf.Hub {
 		// Configure gateway
 		t.gateway, err = gateway.NewGateway(gateway.Config{
 			Addr:            conf.AddrGatewayHost,
@@ -612,9 +613,9 @@ func (t *Textile) authFunc(ctx context.Context) (context.Context, error) {
 				return nil, status.Error(codes.NotFound, "Account not found")
 			}
 			switch acc.Type {
-			case mdb.Dev:
+			case model.Dev:
 				ctx = mdb.NewDevContext(ctx, acc)
-			case mdb.Org:
+			case model.Org:
 				ctx = mdb.NewOrgContext(ctx, acc)
 			}
 			ctx = thread.NewTokenContext(ctx, acc.Token)
@@ -635,7 +636,7 @@ func (t *Textile) authFunc(ctx context.Context) (context.Context, error) {
 				}
 				if user == nil {
 					// Attach a temp user context that will be accessible in the next interceptor.
-					user = &mdb.User{Key: ukey}
+					user = &model.User{Key: ukey}
 				}
 				ctx = mdb.NewUserContext(ctx, user)
 			} else if method != "/threads.pb.API/GetToken" && method != "/threads.net.pb.API/GetToken" {
@@ -690,7 +691,7 @@ func generatePowUnaryInterceptor(serviceName string, allowedMethods []string, se
 			return nil, status.Errorf(codes.PermissionDenied, "method not allowed: %s", info.FullMethod)
 		}
 
-		var powInfo *mdb.PowInfo
+		var powInfo *model.PowInfo
 		var owner thread.PubKey
 		var isAccount bool
 		if org, ok := mdb.OrgFromContext(ctx); ok {
@@ -713,9 +714,9 @@ func generatePowUnaryInterceptor(serviceName string, allowedMethods []string, se
 				return fmt.Errorf("creating new powergate integration: %v", err)
 			}
 			if isAccount {
-				_, err = c.Accounts.UpdatePowInfo(ctx, owner, &mdb.PowInfo{ID: id, Token: token})
+				_, err = c.Accounts.UpdatePowInfo(ctx, owner, &model.PowInfo{ID: id, Token: token})
 			} else {
-				_, err = c.Users.UpdatePowInfo(ctx, owner, &mdb.PowInfo{ID: id, Token: token})
+				_, err = c.Users.UpdatePowInfo(ctx, owner, &model.PowInfo{ID: id, Token: token})
 			}
 			if err != nil {
 				return fmt.Errorf("updating user/account with new powergate information: %v", err)
@@ -857,13 +858,13 @@ func (t *Textile) threadInterceptor() grpc.UnaryServerInterceptor {
 		// Collect the user if we haven't seen them before.
 		user, ok := mdb.UserFromContext(ctx)
 		if ok && user.CreatedAt.IsZero() {
-			var powInfo *mdb.PowInfo
+			var powInfo *model.PowInfo
 			if t.powc != nil {
 				ffsId, ffsToken, err := t.powc.FFS.Create(ctx)
 				if err != nil {
 					return nil, err
 				}
-				powInfo = &mdb.PowInfo{ID: ffsId, Token: ffsToken}
+				powInfo = &model.PowInfo{ID: ffsId, Token: ffsToken}
 			}
 			if err := t.collections.Users.Create(ctx, owner, powInfo); err != nil {
 				return nil, err
@@ -871,7 +872,7 @@ func (t *Textile) threadInterceptor() grpc.UnaryServerInterceptor {
 		}
 		if !ok && owner != nil {
 			// Add the dev/org as the user for the user API.
-			ctx = mdb.NewUserContext(ctx, &mdb.User{Key: owner})
+			ctx = mdb.NewUserContext(ctx, &model.User{Key: owner})
 		}
 
 		// Preemptively track the new thread ID for the owner.

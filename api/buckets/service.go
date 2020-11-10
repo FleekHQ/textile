@@ -2487,7 +2487,7 @@ func (s *Service) pinBlocks(ctx context.Context, nodes []ipld.Node) error {
 // the account/user.
 func (s *Service) sumBytesPinned(ctx context.Context, delta int64) error {
 	var a *model.Account
-	var u *mdb.User
+	var u *model.User
 	if owner, ok := ctx.Value(ctxKey("owner")).(string); ok && owner != "" {
 		pk := &thread.Libp2pPubKey{}
 		err := pk.UnmarshalString(owner)
@@ -2676,7 +2676,7 @@ func accountFromContext(ctx context.Context) *model.Account {
 	return nil
 }
 
-func userFromContext(ctx context.Context) *mdb.User {
+func userFromContext(ctx context.Context) *model.User {
 	if user, ok := mdb.UserFromContext(ctx); ok {
 		return user
 	}

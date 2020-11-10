@@ -23,6 +23,7 @@ type Collections struct {
 	IPNSKeys       *IPNSKeys
 	BucketArchives *BucketArchives
 	Accounts       *Accounts
+	Users          *Users
 }
 
 // NewCollections gets or create store instances for active collections.
@@ -49,7 +50,10 @@ func NewCollections(ctx context.Context, storePath string, hub bool) (*Collectio
 	if err != nil {
 		return nil, err
 	}
-
+	c.Users, err = NewUsers(ctx, st)
+	if err != nil {
+		return nil, err
+	}
 	return c, nil
 }
 

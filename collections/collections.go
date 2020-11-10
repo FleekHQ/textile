@@ -25,7 +25,7 @@ type Collections struct {
 	BucketArchives *BucketArchives
 	//ArchiveTracking *ArchiveTracking
 
-	//Users *Users
+	Users *Users
 }
 
 type CollectionsOptions func(*Collections)

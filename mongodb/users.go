@@ -12,19 +12,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type User struct {
-	Key              thread.PubKey
-	BucketsTotalSize int64
-	CreatedAt        time.Time
-	PowInfo          *model.PowInfo
-}
-
-func NewUserContext(ctx context.Context, user *User) context.Context {
+func NewUserContext(ctx context.Context, user *model.User) context.Context {
 	return context.WithValue(ctx, ctxKey("user"), user)
 }
 
-func UserFromContext(ctx context.Context) (*User, bool) {
-	user, ok := ctx.Value(ctxKey("user")).(*User)
+func UserFromContext(ctx context.Context) (*model.User, bool) {
+	user, ok := ctx.Value(ctxKey("user")).(*model.User)
 	return user, ok
 }
 
@@ -37,7 +30,7 @@ func NewUsers(_ context.Context, db *mongo.Database) (*Users, error) {
 }
 
 func (u *Users) Create(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) error {
-	doc := &User{
+	doc := &model.User{
 		Key:       key,
 		CreatedAt: time.Now(),
 		PowInfo:   powInfo,
@@ -61,7 +54,7 @@ func (u *Users) Create(ctx context.Context, key thread.PubKey, powInfo *model.Po
 	return nil
 }
 
-func (u *Users) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*User, error) {
+func (u *Users) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*model.User, error) {
 	id, err := key.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -82,7 +75,7 @@ func (u *Users) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *m
 	return u.Get(ctx, key)
 }
 
-func (u *Users) Get(ctx context.Context, key thread.PubKey) (*User, error) {
+func (u *Users) Get(ctx context.Context, key thread.PubKey) (*model.User, error) {
 	id, err := key.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -131,7 +124,7 @@ func (u *Users) SetBucketsTotalSize(ctx context.Context, key thread.PubKey, newT
 	return nil
 }
 
-func decodeUser(raw bson.M) (*User, error) {
+func decodeUser(raw bson.M) (*model.User, error) {
 	key := &thread.Libp2pPubKey{}
 	err := key.UnmarshalBinary(raw["_id"].(primitive.Binary).Data)
 	if err != nil {
@@ -145,7 +138,7 @@ func decodeUser(raw bson.M) (*User, error) {
 	if v, ok := raw["buckets_total_size"]; ok {
 		bucketsTotalSize = v.(int64)
 	}
-	return &User{
+	return &model.User{
 		Key:              key,
 		BucketsTotalSize: bucketsTotalSize,
 		CreatedAt:        created,
