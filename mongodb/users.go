@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/textile/v2/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,7 +16,7 @@ type User struct {
 	Key              thread.PubKey
 	BucketsTotalSize int64
 	CreatedAt        time.Time
-	PowInfo          *PowInfo
+	PowInfo          *model.PowInfo
 }
 
 func NewUserContext(ctx context.Context, user *User) context.Context {
@@ -35,7 +36,7 @@ func NewUsers(_ context.Context, db *mongo.Database) (*Users, error) {
 	return &Users{col: db.Collection("users")}, nil
 }
 
-func (u *Users) Create(ctx context.Context, key thread.PubKey, powInfo *PowInfo) error {
+func (u *Users) Create(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) error {
 	doc := &User{
 		Key:       key,
 		CreatedAt: time.Now(),
@@ -60,7 +61,7 @@ func (u *Users) Create(ctx context.Context, key thread.PubKey, powInfo *PowInfo)
 	return nil
 }
 
-func (u *Users) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *PowInfo) (*User, error) {
+func (u *Users) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*User, error) {
 	id, err := key.MarshalBinary()
 	if err != nil {
 		return nil, err

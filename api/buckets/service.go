@@ -2128,7 +2128,7 @@ func (s *Service) Archive(ctx context.Context, req *pb.ArchiveRequest) (*pb.Arch
 		return nil, fmt.Errorf("parsing cid path: %s", err)
 	}
 
-	var powInfo *mdb.PowInfo
+	var powInfo *model.PowInfo
 	var owner thread.PubKey
 	var isAccount bool
 	if acct := accountFromContext(ctx); acct != nil {
@@ -2149,9 +2149,9 @@ func (s *Service) Archive(ctx context.Context, req *pb.ArchiveRequest) (*pb.Arch
 			return fmt.Errorf("creating new powergate integration: %v", err)
 		}
 		if isAccount {
-			_, err = s.Collections.Accounts.UpdatePowInfo(ctx, owner, &mdb.PowInfo{ID: id, Token: token})
+			_, err = s.Collections.Accounts.UpdatePowInfo(ctx, owner, &model.PowInfo{ID: id, Token: token})
 		} else {
-			_, err = s.Collections.Users.UpdatePowInfo(ctx, owner, &mdb.PowInfo{ID: id, Token: token})
+			_, err = s.Collections.Users.UpdatePowInfo(ctx, owner, &model.PowInfo{ID: id, Token: token})
 		}
 		if err != nil {
 			return fmt.Errorf("updating user/account with new powergate information: %v", err)
@@ -2328,7 +2328,7 @@ func (s *Service) ArchiveWatch(req *pb.ArchiveWatchRequest, server pb.APIService
 		return ErrArchivingFeatureDisabled
 	}
 
-	var powInfo *mdb.PowInfo
+	var powInfo *model.PowInfo
 	if acct := accountFromContext(server.Context()); acct != nil {
 		powInfo = acct.PowInfo
 	} else if user := userFromContext(server.Context()); user != nil {
@@ -2486,7 +2486,7 @@ func (s *Service) pinBlocks(ctx context.Context, nodes []ipld.Node) error {
 // sumBytesPinned adds the provided delta to the buckets total size from
 // the account/user.
 func (s *Service) sumBytesPinned(ctx context.Context, delta int64) error {
-	var a *mdb.Account
+	var a *model.Account
 	var u *mdb.User
 	if owner, ok := ctx.Value(ctxKey("owner")).(string); ok && owner != "" {
 		pk := &thread.Libp2pPubKey{}
@@ -2666,7 +2666,7 @@ func getAccountOrUserFromContext(ctx context.Context) thread.PubKey {
 	}
 }
 
-func accountFromContext(ctx context.Context) *mdb.Account {
+func accountFromContext(ctx context.Context) *model.Account {
 	if org, ok := mdb.OrgFromContext(ctx); ok {
 		return org
 	}

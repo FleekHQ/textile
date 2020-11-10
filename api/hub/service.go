@@ -22,6 +22,7 @@ import (
 	bi "github.com/textileio/textile/v2/buildinfo"
 	"github.com/textileio/textile/v2/email"
 	"github.com/textileio/textile/v2/ipns"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	tdb "github.com/textileio/textile/v2/threaddb"
 	"github.com/textileio/textile/v2/util"
@@ -82,13 +83,13 @@ func (s *Service) Signup(ctx context.Context, req *pb.SignupRequest) (*pb.Signup
 		return nil, status.Error(codes.Unauthenticated, "Could not verify email address")
 	}
 
-	var powInfo *mdb.PowInfo
+	var powInfo *model.PowInfo
 	if s.Pow != nil {
 		ffsId, ffsToken, err := s.Pow.FFS.Create(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Unable to create FFS instance: %v", err)
 		}
-		powInfo = &mdb.PowInfo{ID: ffsId, Token: ffsToken}
+		powInfo = &model.PowInfo{ID: ffsId, Token: ffsToken}
 	}
 
 	dev, err := s.Collections.Accounts.CreateDev(ctx, req.Username, req.Email, powInfo)
@@ -115,10 +116,10 @@ func (s *Service) Signup(ctx context.Context, req *pb.SignupRequest) (*pb.Signup
 	}
 	for _, invite := range invites {
 		if invite.Accepted {
-			if err := s.Collections.Accounts.AddMember(ctx, invite.Org, mdb.Member{
+			if err := s.Collections.Accounts.AddMember(ctx, invite.Org, model.Member{
 				Key:      dev.Key,
 				Username: dev.Username,
-				Role:     mdb.OrgMember,
+				Role:     model.OrgMember,
 			}); err != nil {
 				if err == mongo.ErrNoDocuments {
 					if err := s.Collections.Invites.Delete(ctx, invite.Token); err != nil {
@@ -347,18 +348,18 @@ func (s *Service) CreateOrg(ctx context.Context, req *pb.CreateOrgRequest) (*pb.
 
 	dev, _ := mdb.DevFromContext(ctx)
 
-	var powInfo *mdb.PowInfo
+	var powInfo *model.PowInfo
 	if s.Pow != nil {
 		ffsId, ffsToken, err := s.Pow.FFS.Create(ctx)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Unable to create FFS instance: %v", err)
 		}
-		powInfo = &mdb.PowInfo{ID: ffsId, Token: ffsToken}
+		powInfo = &model.PowInfo{ID: ffsId, Token: ffsToken}
 	}
-	org, err := s.Collections.Accounts.CreateOrg(ctx, req.Name, []mdb.Member{{
+	org, err := s.Collections.Accounts.CreateOrg(ctx, req.Name, []model.Member{{
 		Key:      dev.Key,
 		Username: dev.Username,
-		Role:     mdb.OrgOwner,
+		Role:     model.OrgOwner,
 	}}, powInfo)
 	if err != nil {
 		return nil, err
@@ -395,7 +396,7 @@ func (s *Service) GetOrg(ctx context.Context, _ *pb.GetOrgRequest) (*pb.GetOrgRe
 	}, nil
 }
 
-func (s *Service) orgToPbOrg(org *mdb.Account) (*pb.OrgInfo, error) {
+func (s *Service) orgToPbOrg(org *model.Account) (*pb.OrgInfo, error) {
 	members := make([]*pb.OrgInfo_Member, len(org.Members))
 	for i, m := range org.Members {
 		key, err := m.Key.MarshalBinary()
@@ -545,9 +546,9 @@ func ownerFromContext(ctx context.Context) thread.PubKey {
 	return org.Key
 }
 
-func (s *Service) destroyAccount(ctx context.Context, a *mdb.Account) error {
+func (s *Service) destroyAccount(ctx context.Context, a *model.Account) error {
 	// First, ensure that the account does not own any orgs
-	if a.Type == mdb.Dev {
+	if a.Type == model.Dev {
 		orgs, err := s.Collections.Accounts.ListByOwner(ctx, a.Key)
 		if err != nil {
 			return err
@@ -612,7 +613,7 @@ func (s *Service) destroyAccount(ctx context.Context, a *mdb.Account) error {
 	if err = s.Collections.Sessions.DeleteByOwner(ctx, a.Key); err != nil {
 		return err
 	}
-	if a.Type == mdb.Org {
+	if a.Type == model.Org {
 		if err = s.Collections.Invites.DeleteByOrg(ctx, a.Username); err != nil {
 			return err
 		}

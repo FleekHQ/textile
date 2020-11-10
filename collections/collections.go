@@ -16,7 +16,7 @@ type Collections struct {
 	bdb        *badgerdb.Collections
 
 	//Sessions *Sessions
-	//Accounts *Accounts
+	Accounts *Accounts
 	//Invites  *Invites
 
 	//Threads         *Threads
@@ -72,6 +72,11 @@ func NewCollections(ctx context.Context, hub bool, opts ...CollectionsOptions) (
 	}
 
 	c.BucketArchives, err = NewBucketArchives(ctx, hub, WithMongoBAOpts(*c.mdb.BucketArchives), WithBadgerBAOpts(*c.bdb.BucketArchives))
+	if err != nil {
+		return nil, err
+	}
+
+	c.Accounts, err = NewAccounts(ctx, hub, WithMongoAccountsOpts(*c.mdb.Accounts), WithBadgerAccountsOpts(*c.bdb.Accounts))
 	if err != nil {
 		return nil, err
 	}

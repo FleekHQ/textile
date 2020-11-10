@@ -326,7 +326,6 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		}
 	}
 	t.buckLocks = nutil.NewSemaphorePool(1)
-	// there is a subset of bucketarvices,accoutns,users to create an interface for
 	bs := &buckets.Service{
 		Collections:               t.gencol,
 		Buckets:                   t.bucks,

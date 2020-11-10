@@ -13,6 +13,7 @@ import (
 	powc "github.com/textileio/powergate/api/client"
 	"github.com/textileio/powergate/ffs"
 	"github.com/textileio/textile/v2/api/common"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	tdb "github.com/textileio/textile/v2/threaddb"
 )
@@ -89,7 +90,7 @@ func (t *Tracker) run() {
 						ctx, cancel := context.WithTimeout(t.ctx, time.Second*10)
 						defer cancel()
 
-						var powInfo *mdb.PowInfo
+						var powInfo *model.PowInfo
 						if account, err := t.colls.Accounts.Get(ctx, a.Owner); err == nil {
 							powInfo = account.PowInfo
 						} else if user, err := t.colls.Users.Get(ctx, a.Owner); err == nil {
@@ -138,7 +139,7 @@ func (t *Tracker) Track(ctx context.Context, dbID thread.ID, dbToken thread.Toke
 // If a fatal error in tracking happens, it will return an error, which indicates the archive should be untracked.
 // If the archive didn't reach a final status yet, or a possibly recoverable error (by retrying) happens, it will return (true, "retry cause", nil).
 // If the archive reach final status, it will return (false, "", nil) and the tracking can be considered done.
-func (t *Tracker) trackArchiveProgress(ctx context.Context, buckKey string, dbID thread.ID, dbToken thread.Token, jid ffs.JobID, bucketRoot cid.Cid, powInfo *mdb.PowInfo) (bool, string, error) {
+func (t *Tracker) trackArchiveProgress(ctx context.Context, buckKey string, dbID thread.ID, dbToken thread.Token, jid ffs.JobID, bucketRoot cid.Cid, powInfo *model.PowInfo) (bool, string, error) {
 	log.Infof("querying archive status of job %s", jid)
 	defer log.Infof("finished querying archive status of job %s", jid)
 	// Step 1: watch for the Job status, and keep updating on Mongo until

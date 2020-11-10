@@ -30,6 +30,7 @@ import (
 	tutil "github.com/textileio/go-threads/util"
 	bucketsclient "github.com/textileio/textile/v2/api/buckets/client"
 	"github.com/textileio/textile/v2/api/common"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -295,10 +296,10 @@ func (g *Gateway) consentInvite(c *gin.Context) {
 			}
 		}
 		if dev != nil {
-			if err := g.collections.Accounts.AddMember(ctx, invite.Org, mdb.Member{
+			if err := g.collections.Accounts.AddMember(ctx, invite.Org, model.Member{
 				Key:      dev.Key,
 				Username: dev.Username,
-				Role:     mdb.OrgMember,
+				Role:     model.OrgMember,
 			}); err != nil {
 				if err == mongo.ErrNoDocuments {
 					if err := g.collections.Invites.Delete(ctx, invite.Token); err != nil {
