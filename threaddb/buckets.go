@@ -19,7 +19,7 @@ import (
 	powc "github.com/textileio/powergate/api/client"
 	"github.com/textileio/powergate/ffs"
 	"github.com/textileio/textile/v2/buckets"
-	mdb "github.com/textileio/textile/v2/mongodb"
+	"github.com/textileio/textile/v2/collections"
 )
 
 const Version = 1
@@ -434,7 +434,7 @@ func init() {
 type Buckets struct {
 	Collection
 
-	baCol    *mdb.BucketArchives
+	baCol    *collections.BucketArchives
 	pgClient *powc.Client
 
 	lock   sync.Mutex
@@ -444,7 +444,7 @@ type Buckets struct {
 }
 
 // NewBuckets returns a new buckets collection mananger.
-func NewBuckets(tc *dbc.Client, pgc *powc.Client, col *mdb.BucketArchives) (*Buckets, error) {
+func NewBuckets(tc *dbc.Client, pgc *powc.Client, col *collections.BucketArchives) (*Buckets, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Buckets{
 		Collection: Collection{

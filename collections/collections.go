@@ -79,10 +79,16 @@ func NewCollections(ctx context.Context, hub bool, opts ...CollectionsOptions) (
 	return c, nil
 }
 
-// func (c *Collections) GetIPNSKeys() IPNSKeys {
-// 	if c.hub {
-// 		return c.mdb.IPNSKeys.(IPNSKeys)
-// 	} else {
-// 		return c.bdb.IPNSKeys.(IPNSKeys)
-// 	}
-// }
+func (c *Collections) Close() error {
+	err := c.bdb.Close()
+	if err != nil {
+		return err
+	}
+
+	err = c.mdb.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

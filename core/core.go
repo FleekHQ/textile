@@ -228,9 +228,12 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		return nil, err
 	}
 
-	//overlap: we want 1 object that can do either badger or mongo
-	// t.collections.GetIPNSKeys()
-	t.ipnsm, err = ipns.NewManager(t.collections.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
+	t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithMongoCollectionOpts(conf.AddrMongoURI, conf.MongoName))
+	if err != nil {
+		return nil, err
+	}
+
+	t.ipnsm, err = ipns.NewManager(t.gencol.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
 	if err != nil {
 		return nil, err
 	}
@@ -266,10 +269,8 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 	if err != nil {
 		return nil, err
 	}
-	// same overlap
-	// t.collections.GetBucketArchives
 	// just implement bucket archives if it crashes
-	t.bucks, err = tdb.NewBuckets(t.th, t.powc, t.collections.BucketArchives)
+	t.bucks, err = tdb.NewBuckets(t.th, t.powc, t.gencol.BucketArchives)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +302,6 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			return nil, err
 		}
 		t.emailSessionBus = broadcast.NewBroadcaster(0)
-		// use mongo collection directly
 		hs = &hub.Service{
 			Collections:        t.collections,
 			Threads:            t.th,
@@ -314,14 +314,12 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			IPNSManager:        t.ipnsm,
 			Pow:                t.powc,
 		}
-		// directly
 		us = &users.Service{
 			Collections: t.collections,
 			Mail:        t.mail,
 		}
 	}
 	if conf.Hub {
-		// pass mongo directly
 		t.archiveTracker, err = archive.New(t.collections, t.bucks, t.powc, t.internalHubSession)
 		if err != nil {
 			return nil, err
@@ -330,7 +328,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 	t.buckLocks = nutil.NewSemaphorePool(1)
 	// there is a subset of bucketarvices,accoutns,users to create an interface for
 	bs := &buckets.Service{
-		Collections:               t.collections,
+		Collections:               t.gencol,
 		Buckets:                   t.bucks,
 		BucketsMaxSize:            conf.BucketsMaxSize,
 		BucketsTotalMaxSize:       conf.BucketsTotalMaxSize,
@@ -373,7 +371,6 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 				return nil, err
 			}
 		}
-		// pass in directly again
 		opts = []grpc.ServerOption{
 			grpcm.WithUnaryServerChain(
 				auth.UnaryServerInterceptor(t.authFunc),
@@ -441,25 +438,26 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		}
 	}()
 
-	// turn off gateway if !conf.Hub
-	// Configure gateway
-	t.gateway, err = gateway.NewGateway(gateway.Config{
-		Addr:            conf.AddrGatewayHost,
-		URL:             conf.AddrGatewayURL,
-		Subdomains:      conf.UseSubdomains,
-		BucketsDomain:   conf.DNSDomain,
-		APIAddr:         conf.AddrAPI,
-		APISession:      t.internalHubSession,
-		Collections:     t.collections,
-		IPFSClient:      ic,
-		EmailSessionBus: t.emailSessionBus,
-		Hub:             conf.Hub,
-		Debug:           conf.Debug,
-	})
-	if err != nil {
-		return nil, err
+	if conf.hub {
+		// Configure gateway
+		t.gateway, err = gateway.NewGateway(gateway.Config{
+			Addr:            conf.AddrGatewayHost,
+			URL:             conf.AddrGatewayURL,
+			Subdomains:      conf.UseSubdomains,
+			BucketsDomain:   conf.DNSDomain,
+			APIAddr:         conf.AddrAPI,
+			APISession:      t.internalHubSession,
+			Collections:     t.collections,
+			IPFSClient:      ic,
+			EmailSessionBus: t.emailSessionBus,
+			Hub:             conf.Hub,
+			Debug:           conf.Debug,
+		})
+		if err != nil {
+			return nil, err
+		}
+		t.gateway.Start()
 	}
-	t.gateway.Start()
 
 	log.Info("started")
 
@@ -508,6 +506,9 @@ func (t *Textile) Close(force bool) error {
 		}
 	}
 	if err := t.collections.Close(); err != nil {
+		return err
+	}
+	if err := t.gencol.Close(); err != nil {
 		return err
 	}
 	t.ipnsm.Cancel()

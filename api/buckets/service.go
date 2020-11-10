@@ -35,6 +35,7 @@ import (
 	"github.com/textileio/textile/v2/api/common"
 	"github.com/textileio/textile/v2/buckets"
 	"github.com/textileio/textile/v2/buckets/archive"
+	"github.com/textileio/textile/v2/collections"
 	"github.com/textileio/textile/v2/ipns"
 	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
@@ -96,7 +97,7 @@ type ctxKey string
 
 // Service is a gRPC service for buckets.
 type Service struct {
-	Collections               *mdb.Collections
+	Collections               *collections.Collections
 	Buckets                   *tdb.Buckets
 	BucketsMaxSize            int64
 	BucketsTotalMaxSize       int64
