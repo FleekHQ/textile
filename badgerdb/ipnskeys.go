@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/FleekHQ/space-daemon/core/store"
+	c "github.com/FleekHQ/textile/collections"
 	badger "github.com/dgraph-io/badger"
 	"github.com/textileio/go-threads/core/thread"
-	c "github.com/textileio/textile/collections"
 )
 
 type IPNSKey struct {
@@ -85,7 +85,7 @@ func (k *IPNSKeys) Get(ctx context.Context, name string) (*c.IPNSKey, error) {
 	return &ipnsKey, nil
 }
 
-func (k *IPNSKeys) GetByCid(ctx context.Context, cid string) (*IPNSKey, error) {
+func (k *IPNSKeys) GetByCid(ctx context.Context, cid string) (*c.IPNSKey, error) {
 	var ipnsKey IPNSKey
 
 	b, err := k.st.Get([]byte(cidStoreKeyPrefix + cid))
