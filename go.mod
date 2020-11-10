@@ -1,4 +1,4 @@
-module github.com/textileio/textile/v2
+module github.com/FleekHQ/textile/v2
 
 go 1.14
 
