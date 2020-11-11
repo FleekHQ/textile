@@ -27,6 +27,10 @@ var (
 				Key:      "repo",
 				DefValue: "${HOME}/." + daemonName + "/repo",
 			},
+			"collectionRepo": {
+				Key:      "collection.repo",
+				DefValue: "${HOME}/." + daemonName + "/collection/repo",
+			},
 			"debug": {
 				Key:      "log.debug",
 				DefValue: false,
@@ -103,6 +107,11 @@ func init() {
 		"r",
 		config.Flags["repo"].DefValue.(string),
 		"Path to repository")
+	rootCmd.PersistentFlags().StringP(
+		"collectionRepo",
+		"c",
+		config.Flags["collectionRepo"].DefValue.(string),
+		"Path to collection repository")
 	rootCmd.PersistentFlags().BoolP(
 		"debug",
 		"d",
@@ -220,16 +229,16 @@ var rootCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		textile, err := core.NewTextile(ctx, core.Config{
-			RepoPath: config.Viper.GetString("repo"),
-
-			AddrAPI:          addrApi,
-			AddrAPIProxy:     addrApiProxy,
-			AddrThreadsHost:  addrThreadsHost,
-			AddrIPFSAPI:      addrIpfsApi,
-			AddrGatewayHost:  addrGatewayHost,
-			AddrGatewayURL:   addrGatewayUrl,
-			AddrPowergateAPI: addrPowergateApi,
-			AddrMongoURI:     addrMongoUri,
+			RepoPath:           config.Viper.GetString("repo"),
+			CollectionRepoPath: config.Viper.GetString("collection.repo"),
+			AddrAPI:            addrApi,
+			AddrAPIProxy:       addrApiProxy,
+			AddrThreadsHost:    addrThreadsHost,
+			AddrIPFSAPI:        addrIpfsApi,
+			AddrGatewayHost:    addrGatewayHost,
+			AddrGatewayURL:     addrGatewayUrl,
+			AddrPowergateAPI:   addrPowergateApi,
+			AddrMongoURI:       addrMongoUri,
 
 			UseSubdomains: config.Viper.GetBool("gateway.subdomains"),
 

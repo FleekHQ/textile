@@ -59,26 +59,50 @@ func NewCollections(ctx context.Context, hub bool, opts ...CollectionsOptions) (
 		if err != nil {
 			return nil, err
 		}
+
+		c.IPNSKeys, err = NewIPNSKeys(ctx, hub, WithMongoIPNSKeysOpts(*c.mdb.IPNSKeys))
+		if err != nil {
+			return nil, err
+		}
+
+		c.BucketArchives, err = NewBucketArchives(ctx, hub, WithMongoBAOpts(*c.mdb.BucketArchives))
+		if err != nil {
+			return nil, err
+		}
+
+		c.Accounts, err = NewAccounts(ctx, hub, WithMongoAccountsOpts(*c.mdb.Accounts))
+		if err != nil {
+			return nil, err
+		}
+
+		c.Users, err = NewUsers(ctx, hub, WithMongoUsersOpts(*c.mdb.Users))
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		c.bdb, err = badgerdb.NewCollections(ctx, c.badgerpath, c.hub)
 		if err != nil {
 			return nil, err
 		}
-	}
+		c.IPNSKeys, err = NewIPNSKeys(ctx, hub, WithBadgerIPNSKeysOpts(*c.bdb.IPNSKeys))
+		if err != nil {
+			return nil, err
+		}
 
-	c.IPNSKeys, err = NewIPNSKeys(ctx, hub, WithMongoIPNSKeysOpts(*c.mdb.IPNSKeys), WithBadgerIPNSKeysOpts(*c.bdb.IPNSKeys))
-	if err != nil {
-		return nil, err
-	}
+		c.BucketArchives, err = NewBucketArchives(ctx, hub, WithBadgerBAOpts(*c.bdb.BucketArchives))
+		if err != nil {
+			return nil, err
+		}
 
-	c.BucketArchives, err = NewBucketArchives(ctx, hub, WithMongoBAOpts(*c.mdb.BucketArchives), WithBadgerBAOpts(*c.bdb.BucketArchives))
-	if err != nil {
-		return nil, err
-	}
+		c.Accounts, err = NewAccounts(ctx, hub, WithBadgerAccountsOpts(*c.bdb.Accounts))
+		if err != nil {
+			return nil, err
+		}
 
-	c.Accounts, err = NewAccounts(ctx, hub, WithMongoAccountsOpts(*c.mdb.Accounts), WithBadgerAccountsOpts(*c.bdb.Accounts))
-	if err != nil {
-		return nil, err
+		c.Users, err = NewUsers(ctx, hub, WithBadgerUsersOpts(*c.bdb.Users))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil

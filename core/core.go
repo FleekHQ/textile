@@ -225,14 +225,22 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			return nil, err
 		}
 	}
-	t.collections, err = mdb.NewCollections(ctx, conf.AddrMongoURI, conf.MongoName, conf.Hub)
-	if err != nil {
-		return nil, err
-	}
 
-	t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithMongoCollectionOpts(conf.AddrMongoURI, conf.MongoName), collections.WithBadgerCollectionOpts(conf.CollectionRepoPath))
-	if err != nil {
-		return nil, err
+	if conf.Hub {
+		t.collections, err = mdb.NewCollections(ctx, conf.AddrMongoURI, conf.MongoName, conf.Hub)
+		if err != nil {
+			return nil, err
+		}
+
+		t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithMongoCollectionOpts(conf.AddrMongoURI, conf.MongoName), collections.WithBadgerCollectionOpts(conf.CollectionRepoPath))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithBadgerCollectionOpts(conf.CollectionRepoPath))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	t.ipnsm, err = ipns.NewManager(t.gencol.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)

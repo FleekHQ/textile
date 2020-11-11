@@ -2,6 +2,8 @@ module github.com/FleekHQ/textile/v2
 
 go 1.14
 
+replace github.com/textileio/textile/v2 => ./
+
 require (
 	cloud.google.com/go v0.56.0 // indirect
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
