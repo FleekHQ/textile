@@ -33,6 +33,11 @@ func NewIPNSKeys(_ context.Context, hub bool, opts ...IPNSKeysOptions) (*IPNSKey
 	k := &IPNSKeys{
 		hub: hub,
 	}
+
+	for _, opt := range opts {
+		opt(k)
+	}
+
 	return k, nil
 }
 

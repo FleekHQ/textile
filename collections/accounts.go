@@ -33,6 +33,11 @@ func NewAccounts(_ context.Context, hub bool, opts ...AccountsOptions) (*Account
 	a := &Accounts{
 		hub: hub,
 	}
+
+	for _, opt := range opts {
+		opt(a)
+	}
+
 	return a, nil
 }
 

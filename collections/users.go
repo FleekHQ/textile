@@ -33,6 +33,11 @@ func NewUsers(_ context.Context, hub bool, opts ...UsersOptions) (*Users, error)
 	u := &Users{
 		hub: hub,
 	}
+
+	for _, opt := range opts {
+		opt(u)
+	}
+
 	return u, nil
 }
 

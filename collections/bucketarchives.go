@@ -30,6 +30,11 @@ func WithBadgerBAOpts(b badgerdb.BucketArchives) BucketArchiveOptions {
 
 func NewBucketArchives(_ context.Context, hub bool, opts ...BucketArchiveOptions) (*BucketArchives, error) {
 	b := &BucketArchives{hub: hub}
+
+	for _, opt := range opts {
+		opt(b)
+	}
+
 	return b, nil
 }
 
