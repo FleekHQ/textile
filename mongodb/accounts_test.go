@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/textile/v2/model"
 	. "github.com/textileio/textile/v2/mongodb"
 )
 
@@ -17,9 +18,9 @@ func TestAccounts_CreateDev(t *testing.T) {
 	col, err := NewAccounts(context.Background(), db)
 	require.NoError(t, err)
 
-	created, err := col.CreateDev(context.Background(), "jon", "jon@doe.com", &PowInfo{ID: "id", Token: "token"})
+	created, err := col.CreateDev(context.Background(), "jon", "jon@doe.com", &model.PowInfo{ID: "id", Token: "token"})
 	require.NoError(t, err)
-	assert.Equal(t, Dev, created.Type)
+	assert.Equal(t, model.Dev, created.Type)
 	assert.Equal(t, "jon", created.Username)
 	assert.Equal(t, "jon@doe.com", created.Email)
 	assert.NotEmpty(t, created.Key)
@@ -27,18 +28,18 @@ func TestAccounts_CreateDev(t *testing.T) {
 	assert.Equal(t, "id", created.PowInfo.ID)
 	assert.Equal(t, "token", created.PowInfo.Token)
 
-	_, err = col.CreateDev(context.Background(), "jon", "jon2@doe.com", &PowInfo{ID: "id2", Token: "token2"})
+	_, err = col.CreateDev(context.Background(), "jon", "jon2@doe.com", &model.PowInfo{ID: "id2", Token: "token2"})
 	require.Error(t, err)
-	_, err = col.CreateDev(context.Background(), "jon2", "jon@doe.com", &PowInfo{ID: "id3", Token: "token3"})
+	_, err = col.CreateDev(context.Background(), "jon2", "jon@doe.com", &model.PowInfo{ID: "id3", Token: "token3"})
 	require.Error(t, err)
 
 	_, mem, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	_, err = col.CreateOrg(context.Background(), "jon", []Member{{
+	_, err = col.CreateOrg(context.Background(), "jon", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem),
 		Username: "test",
-		Role:     OrgOwner,
-	}}, &PowInfo{ID: "id", Token: "token"})
+		Role:     model.OrgOwner,
+	}}, &model.PowInfo{ID: "id", Token: "token"})
 	require.Error(t, err)
 }
 
@@ -47,11 +48,11 @@ func TestAccounts_UpdatePowInfo(t *testing.T) {
 	col, err := NewAccounts(context.Background(), db)
 	require.NoError(t, err)
 
-	created, err := col.CreateDev(context.Background(), "jon", "jon@doe.com", &PowInfo{ID: "id", Token: "token"})
+	created, err := col.CreateDev(context.Background(), "jon", "jon@doe.com", &model.PowInfo{ID: "id", Token: "token"})
 	require.NoError(t, err)
 	assert.Equal(t, "id", created.PowInfo.ID)
 	assert.Equal(t, "token", created.PowInfo.Token)
-	updated, err := col.UpdatePowInfo(context.Background(), created.Key, &PowInfo{ID: "id2", Token: "token2"})
+	updated, err := col.UpdatePowInfo(context.Background(), created.Key, &model.PowInfo{ID: "id2", Token: "token2"})
 	require.NoError(t, err)
 	assert.Equal(t, created.Key, updated.Key)
 	assert.Equal(t, "id2", updated.PowInfo.ID)
@@ -68,7 +69,7 @@ func TestAccounts_Get(t *testing.T) {
 	col, err := NewAccounts(context.Background(), db)
 	require.NoError(t, err)
 
-	created, err := col.CreateDev(context.Background(), "jon", "jon@doe.com", &PowInfo{ID: "id", Token: "token"})
+	created, err := col.CreateDev(context.Background(), "jon", "jon@doe.com", &model.PowInfo{ID: "id", Token: "token"})
 	require.NoError(t, err)
 
 	got, err := col.Get(context.Background(), created.Key)
@@ -188,7 +189,7 @@ func TestAccounts_ListMembers(t *testing.T) {
 	_, err = col.CreateDev(context.Background(), "jone", "jone@doe.com", nil)
 	require.NoError(t, err)
 
-	list, err := col.ListMembers(context.Background(), []Member{{Key: one.Key}, {Key: two.Key}})
+	list, err := col.ListMembers(context.Background(), []model.Member{{Key: one.Key}, {Key: two.Key}})
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(list))
 }
@@ -214,27 +215,27 @@ func TestAccounts_CreateOrg(t *testing.T) {
 
 	_, mem, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem),
 		Username: "test",
-		Role:     OrgOwner,
-	}}, &PowInfo{ID: "id", Token: "token"})
+		Role:     model.OrgOwner,
+	}}, &model.PowInfo{ID: "id", Token: "token"})
 	require.NoError(t, err)
-	assert.Equal(t, Org, created.Type)
+	assert.Equal(t, model.Org, created.Type)
 	assert.Equal(t, created.Name, "test")
 	assert.NotNil(t, created.Key)
 	assert.True(t, created.CreatedAt.Unix() > 0)
 	assert.Equal(t, "id", created.PowInfo.ID)
 	assert.Equal(t, "token", created.PowInfo.Token)
 
-	_, err = col.CreateOrg(context.Background(), "test", []Member{{
+	_, err = col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.Error(t, err)
 
-	_, err = col.CreateOrg(context.Background(), "empty", []Member{}, nil)
+	_, err = col.CreateOrg(context.Background(), "empty", []model.Member{}, nil)
 	require.Error(t, err)
 
 	_, err = col.CreateDev(context.Background(), "test", "jon@doe.com", nil)
@@ -248,10 +249,10 @@ func TestAccounts_GetByUsername(t *testing.T) {
 
 	_, mem, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
@@ -270,10 +271,10 @@ func TestAccounts_IsNameAvailable(t *testing.T) {
 
 	_, mem, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "Test!", []Member{{
+	created, err := col.CreateOrg(context.Background(), "Test!", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, created.Username, "Test")
@@ -290,10 +291,10 @@ func TestAccounts_ListByMember(t *testing.T) {
 
 	_, mem, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
@@ -310,10 +311,10 @@ func TestAccounts_ListByOwner(t *testing.T) {
 
 	_, mem1, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem1),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
@@ -324,10 +325,10 @@ func TestAccounts_ListByOwner(t *testing.T) {
 
 	_, mem2, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	err = col.AddMember(context.Background(), created.Username, Member{
+	err = col.AddMember(context.Background(), created.Username, model.Member{
 		Key:      thread.NewLibp2pPubKey(mem2),
 		Username: "member",
-		Role:     OrgMember,
+		Role:     model.OrgMember,
 	})
 	require.NoError(t, err)
 	list, err = col.ListByOwner(context.Background(), thread.NewLibp2pPubKey(mem2))
@@ -342,19 +343,19 @@ func TestAccounts_IsOwner(t *testing.T) {
 
 	_, mem1, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem1),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
 	_, mem2, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	err = col.AddMember(context.Background(), created.Username, Member{
+	err = col.AddMember(context.Background(), created.Username, model.Member{
 		Key:      thread.NewLibp2pPubKey(mem2),
 		Username: "member",
-		Role:     OrgMember,
+		Role:     model.OrgMember,
 	})
 	require.NoError(t, err)
 
@@ -373,19 +374,19 @@ func TestAccounts_IsMember(t *testing.T) {
 
 	_, mem1, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem1),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
 	_, mem2, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	err = col.AddMember(context.Background(), created.Username, Member{
+	err = col.AddMember(context.Background(), created.Username, model.Member{
 		Key:      thread.NewLibp2pPubKey(mem2),
 		Username: "member",
-		Role:     OrgMember,
+		Role:     model.OrgMember,
 	})
 	require.NoError(t, err)
 
@@ -406,25 +407,25 @@ func TestAccounts_AddMember(t *testing.T) {
 
 	_, mem1, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem1),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
 	_, mem2, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	err = col.AddMember(context.Background(), created.Username, Member{
+	err = col.AddMember(context.Background(), created.Username, model.Member{
 		Key:      thread.NewLibp2pPubKey(mem2),
 		Username: "member",
-		Role:     OrgMember,
+		Role:     model.OrgMember,
 	})
 	require.NoError(t, err)
-	err = col.AddMember(context.Background(), created.Username, Member{ // Add again should not duplicate entry
+	err = col.AddMember(context.Background(), created.Username, model.Member{ // Add again should not duplicate entry
 		Key:      thread.NewLibp2pPubKey(mem2),
 		Username: "member",
-		Role:     OrgMember,
+		Role:     model.OrgMember,
 	})
 	require.NoError(t, err)
 
@@ -440,10 +441,10 @@ func TestAccounts_RemoveMember(t *testing.T) {
 
 	_, mem1, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	created, err := col.CreateOrg(context.Background(), "test", []Member{{
+	created, err := col.CreateOrg(context.Background(), "test", []model.Member{{
 		Key:      thread.NewLibp2pPubKey(mem1),
 		Username: "test",
-		Role:     OrgOwner,
+		Role:     model.OrgOwner,
 	}}, nil)
 	require.NoError(t, err)
 
@@ -452,10 +453,10 @@ func TestAccounts_RemoveMember(t *testing.T) {
 
 	_, mem2, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
-	err = col.AddMember(context.Background(), created.Username, Member{
+	err = col.AddMember(context.Background(), created.Username, model.Member{
 		Key:      thread.NewLibp2pPubKey(mem2),
 		Username: "member",
-		Role:     OrgMember,
+		Role:     model.OrgMember,
 	})
 	require.NoError(t, err)
 

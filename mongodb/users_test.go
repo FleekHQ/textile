@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/textile/v2/model"
 	. "github.com/textileio/textile/v2/mongodb"
 )
 
@@ -33,7 +34,7 @@ func TestUsers_Get(t *testing.T) {
 	_, key, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
 	user := thread.NewLibp2pPubKey(key)
-	err = col.Create(context.Background(), user, &PowInfo{ID: "id", Token: "token"})
+	err = col.Create(context.Background(), user, &model.PowInfo{ID: "id", Token: "token"})
 	require.NoError(t, err)
 
 	got, err := col.Get(context.Background(), user)
@@ -51,7 +52,7 @@ func TestUsers_UpdatePowInfo(t *testing.T) {
 	_, key, err := crypto.GenerateEd25519Key(rand.Reader)
 	require.NoError(t, err)
 	user := thread.NewLibp2pPubKey(key)
-	err = col.Create(context.Background(), user, &PowInfo{ID: "id", Token: "token"})
+	err = col.Create(context.Background(), user, &model.PowInfo{ID: "id", Token: "token"})
 	require.NoError(t, err)
 
 	got, err := col.Get(context.Background(), user)
@@ -60,7 +61,7 @@ func TestUsers_UpdatePowInfo(t *testing.T) {
 	assert.Equal(t, "id", got.PowInfo.ID)
 	assert.Equal(t, "token", got.PowInfo.Token)
 
-	updated, err := col.UpdatePowInfo(context.Background(), user, &PowInfo{ID: "id2", Token: "token2"})
+	updated, err := col.UpdatePowInfo(context.Background(), user, &model.PowInfo{ID: "id2", Token: "token2"})
 	require.NoError(t, err)
 	assert.Equal(t, user, updated.Key)
 	assert.Equal(t, "id2", updated.PowInfo.ID)
