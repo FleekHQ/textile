@@ -24,6 +24,7 @@ type Collections struct {
 	BucketArchives *BucketArchives
 	Accounts       *Accounts
 	Users          *Users
+	Invites        *Invites
 }
 
 // NewCollections gets or create store instances for active collections.
@@ -51,6 +52,10 @@ func NewCollections(ctx context.Context, storePath string, hub bool) (*Collectio
 		return nil, err
 	}
 	c.Users, err = NewUsers(ctx, st)
+	if err != nil {
+		return nil, err
+	}
+	c.Invites, err = NewInvites(ctx, st)
 	if err != nil {
 		return nil, err
 	}

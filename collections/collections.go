@@ -2,6 +2,7 @@ package collections
 
 import (
 	"context"
+	"errors"
 
 	"github.com/textileio/textile/v2/badgerdb"
 	"github.com/textileio/textile/v2/mongodb"
@@ -17,7 +18,7 @@ type Collections struct {
 
 	//Sessions *Sessions
 	Accounts *Accounts
-	//Invites  *Invites
+	Invites  *Invites
 
 	//Threads         *Threads
 	//APIKeys         *APIKeys
@@ -27,6 +28,8 @@ type Collections struct {
 
 	Users *Users
 }
+
+var errNotImplemented = errors.New("Not implemented")
 
 type CollectionsOptions func(*Collections)
 
@@ -79,6 +82,11 @@ func NewCollections(ctx context.Context, hub bool, opts ...CollectionsOptions) (
 		if err != nil {
 			return nil, err
 		}
+
+		c.Invites, err = NewInvites(ctx, hub, WithMongoInvitesOpts(*c.mdb.Invites))
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		c.bdb, err = badgerdb.NewCollections(ctx, c.badgerpath, c.hub)
 		if err != nil {
@@ -103,20 +111,29 @@ func NewCollections(ctx context.Context, hub bool, opts ...CollectionsOptions) (
 		if err != nil {
 			return nil, err
 		}
+
+		c.Invites, err = NewInvites(ctx, hub, WithBadgerInvitesOpts(*c.bdb.Invites))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil
 }
 
 func (c *Collections) Close() error {
-	err := c.bdb.Close()
-	if err != nil {
-		return err
+	if c.bdb != nil {
+		err := c.bdb.Close()
+		if err != nil {
+			return err
+		}
 	}
 
-	err = c.mdb.Close()
-	if err != nil {
-		return err
+	if c.mdb != nil {
+		err := c.mdb.Close()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

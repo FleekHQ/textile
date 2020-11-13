@@ -30,6 +30,7 @@ func MakeTextile(t *testing.T) core.Config {
 
 func DefaultTextileConfig(t util.TestingTWithCleanup) core.Config {
 	dir, err := ioutil.TempDir("", "")
+	dir2, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 
 	apiPort, err := freeport.GetFreePort()
@@ -38,15 +39,15 @@ func DefaultTextileConfig(t util.TestingTWithCleanup) core.Config {
 	require.NoError(t, err)
 
 	return core.Config{
-		RepoPath: dir,
-
-		AddrAPI:         util.MustParseAddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", apiPort)),
-		AddrAPIProxy:    util.MustParseAddr("/ip4/0.0.0.0/tcp/0"),
-		AddrThreadsHost: util.MustParseAddr("/ip4/0.0.0.0/tcp/0"),
-		AddrIPFSAPI:     util.MustParseAddr("/ip4/127.0.0.1/tcp/5001"),
-		AddrGatewayHost: util.MustParseAddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", gatewayPort)),
-		AddrGatewayURL:  fmt.Sprintf("http://127.0.0.1:%d", gatewayPort),
-		AddrMongoURI:    "mongodb://127.0.0.1:27017",
+		RepoPath:           dir,
+		CollectionRepoPath: dir2,
+		AddrAPI:            util.MustParseAddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", apiPort)),
+		AddrAPIProxy:       util.MustParseAddr("/ip4/0.0.0.0/tcp/0"),
+		AddrThreadsHost:    util.MustParseAddr("/ip4/0.0.0.0/tcp/0"),
+		AddrIPFSAPI:        util.MustParseAddr("/ip4/127.0.0.1/tcp/5001"),
+		AddrGatewayHost:    util.MustParseAddr(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", gatewayPort)),
+		AddrGatewayURL:     fmt.Sprintf("http://127.0.0.1:%d", gatewayPort),
+		AddrMongoURI:       "mongodb://127.0.0.1:27017",
 
 		MongoName: util.MakeToken(12),
 

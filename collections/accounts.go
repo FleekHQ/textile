@@ -65,3 +65,11 @@ func (a *Accounts) SetBucketsTotalSize(ctx context.Context, key thread.PubKey, n
 		return a.b.SetBucketsTotalSize(ctx, key, newTotalSize)
 	}
 }
+
+func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*model.Account, error) {
+	return nil, errNotImplemented
+}
+
+func (a *Accounts) AddMember(ctx context.Context, username string, member model.Member) error {
+	return errNotImplemented
+}

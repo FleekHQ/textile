@@ -30,8 +30,8 @@ import (
 	tutil "github.com/textileio/go-threads/util"
 	bucketsclient "github.com/textileio/textile/v2/api/buckets/client"
 	"github.com/textileio/textile/v2/api/common"
+	"github.com/textileio/textile/v2/collections"
 	"github.com/textileio/textile/v2/model"
-	mdb "github.com/textileio/textile/v2/mongodb"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 )
@@ -62,7 +62,7 @@ type Gateway struct {
 	subdomains    bool
 	bucketsDomain string
 
-	collections *mdb.Collections
+	collections *collections.Collections
 	apiSession  string
 	threads     *threadsclient.Client
 	buckets     *bucketsclient.Client
@@ -81,7 +81,7 @@ type Config struct {
 	BucketsDomain   string
 	APIAddr         ma.Multiaddr
 	APISession      string
-	Collections     *mdb.Collections
+	Collections     *collections.Collections
 	IPFSClient      iface.CoreAPI
 	EmailSessionBus *broadcast.Broadcaster
 	Hub             bool

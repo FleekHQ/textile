@@ -448,26 +448,24 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 		}
 	}()
 
-	if conf.Hub {
-		// Configure gateway
-		t.gateway, err = gateway.NewGateway(gateway.Config{
-			Addr:            conf.AddrGatewayHost,
-			URL:             conf.AddrGatewayURL,
-			Subdomains:      conf.UseSubdomains,
-			BucketsDomain:   conf.DNSDomain,
-			APIAddr:         conf.AddrAPI,
-			APISession:      t.internalHubSession,
-			Collections:     t.collections,
-			IPFSClient:      ic,
-			EmailSessionBus: t.emailSessionBus,
-			Hub:             conf.Hub,
-			Debug:           conf.Debug,
-		})
-		if err != nil {
-			return nil, err
-		}
-		t.gateway.Start()
+	// Configure gateway
+	t.gateway, err = gateway.NewGateway(gateway.Config{
+		Addr:            conf.AddrGatewayHost,
+		URL:             conf.AddrGatewayURL,
+		Subdomains:      conf.UseSubdomains,
+		BucketsDomain:   conf.DNSDomain,
+		APIAddr:         conf.AddrAPI,
+		APISession:      t.internalHubSession,
+		Collections:     t.gencol,
+		IPFSClient:      ic,
+		EmailSessionBus: t.emailSessionBus,
+		Hub:             conf.Hub,
+		Debug:           conf.Debug,
+	})
+	if err != nil {
+		return nil, err
 	}
+	t.gateway.Start()
 
 	log.Info("started")
 
@@ -515,8 +513,10 @@ func (t *Textile) Close(force bool) error {
 			return err
 		}
 	}
-	if err := t.collections.Close(); err != nil {
-		return err
+	if t.collections != nil {
+		if err := t.collections.Close(); err != nil {
+			return err
+		}
 	}
 	if err := t.gencol.Close(); err != nil {
 		return err
