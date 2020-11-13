@@ -244,6 +244,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 	}
 
 	t.ipnsm, err = ipns.NewManager(t.gencol.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
+
 	if err != nil {
 		return nil, err
 	}
