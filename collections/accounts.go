@@ -67,9 +67,17 @@ func (a *Accounts) SetBucketsTotalSize(ctx context.Context, key thread.PubKey, n
 }
 
 func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*model.Account, error) {
-	return nil, errNotImplemented
+	if a.hub {
+		return a.m.GetByUsernameOrEmail(ctx, usernameOrEmail)
+	} else {
+		return a.b.GetByUsernameOrEmail(ctx, usernameOrEmail)
+	}
 }
 
 func (a *Accounts) AddMember(ctx context.Context, username string, member model.Member) error {
-	return errNotImplemented
+	if a.hub {
+		return a.m.AddMember(ctx, username, member)
+	} else {
+		return a.b.AddMember(ctx, username, member)
+	}
 }
