@@ -58,13 +58,13 @@ func (a *Accounts) Get(ctx context.Context, key thread.PubKey) (*model.Account, 
 	}
 }
 
-func (a *Accounts) SetBucketsTotalSize(ctx context.Context, key thread.PubKey, newTotalSize int64) error {
-	if a.hub {
-		return a.m.SetBucketsTotalSize(ctx, key, newTotalSize)
-	} else {
-		return a.b.SetBucketsTotalSize(ctx, key, newTotalSize)
-	}
-}
+// func (a *Accounts) SetBucketsTotalSize(ctx context.Context, key thread.PubKey, newTotalSize int64) error {
+// 	if a.hub {
+// 		return a.m.SetBucketsTotalSize(ctx, key, newTotalSize)
+// 	} else {
+// 		return a.b.SetBucketsTotalSize(ctx, key, newTotalSize)
+// 	}
+// }
 
 func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*model.Account, error) {
 	if a.hub {

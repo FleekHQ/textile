@@ -6,7 +6,7 @@ import (
 	stripe "github.com/stripe/stripe-go/v72"
 	"github.com/textileio/go-threads/core/thread"
 	pb "github.com/textileio/textile/v2/api/billingd/pb"
-	mdb "github.com/textileio/textile/v2/mongodb"
+	"github.com/textileio/textile/v2/model"
 	"google.golang.org/grpc"
 )
 
@@ -42,7 +42,7 @@ func (c *Client) CreateCustomer(
 	ctx context.Context,
 	key thread.PubKey,
 	email string,
-	accountType mdb.AccountType,
+	accountType model.AccountType,
 	opts ...Option,
 ) (string, error) {
 	args := &options{}

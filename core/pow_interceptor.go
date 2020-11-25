@@ -10,6 +10,7 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/dynamic/grpcdynamic"
 	powc "github.com/textileio/powergate/api/client"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -71,7 +72,7 @@ func powInterceptor(
 			if err != nil {
 				return fmt.Errorf("creating new powergate integration: %v", err)
 			}
-			_, err = c.Accounts.UpdatePowInfo(ctx, account.Owner().Key, &mdb.PowInfo{ID: res.User.Id, Token: res.User.Token})
+			_, err = c.Accounts.UpdatePowInfo(ctx, account.Owner().Key, &model.PowInfo{ID: res.User.Id, Token: res.User.Token})
 			if err != nil {
 				return fmt.Errorf("updating user/account with new powergate information: %v", err)
 			}

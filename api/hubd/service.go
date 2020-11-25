@@ -89,13 +89,13 @@ func (s *Service) Signup(ctx context.Context, req *pb.SignupRequest) (*pb.Signup
 		return nil, status.Error(codes.Unauthenticated, "Could not verify email address")
 	}
 
-	var powInfo *mdb.PowInfo
+	var powInfo *model.PowInfo
 	if s.PowergateClient != nil {
 		res, err := s.PowergateClient.Admin.Users.Create(s.powergateAdminCtx(ctx))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Unable to create user: %v", err)
 		}
-		powInfo = &mdb.PowInfo{ID: res.User.Id, Token: res.User.Token}
+		powInfo = &model.PowInfo{ID: res.User.Id, Token: res.User.Token}
 	}
 
 	dev, err := s.Collections.Accounts.CreateDev(ctx, req.Username, req.Email, powInfo)
@@ -375,18 +375,18 @@ func (s *Service) CreateOrg(ctx context.Context, req *pb.CreateOrgRequest) (*pb.
 	if account.User == nil {
 		return nil, status.Errorf(codes.InvalidArgument, errDevRequired.Error())
 	}
-	var powInfo *mdb.PowInfo
+	var powInfo *model.PowInfo
 	if s.PowergateClient != nil {
 		res, err := s.PowergateClient.Admin.Users.Create(s.powergateAdminCtx(ctx))
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Unable to create user: %v", err)
 		}
-		powInfo = &mdb.PowInfo{ID: res.User.Id, Token: res.User.Token}
+		powInfo = &model.PowInfo{ID: res.User.Id, Token: res.User.Token}
 	}
-	org, err := s.Collections.Accounts.CreateOrg(ctx, req.Name, []mdb.Member{{
+	org, err := s.Collections.Accounts.CreateOrg(ctx, req.Name, []model.Member{{
 		Key:      account.User.Key,
 		Username: account.User.Username,
-		Role:     mdb.OrgOwner,
+		Role:     model.OrgOwner,
 	}}, powInfo)
 	if err != nil {
 		return nil, err
@@ -737,9 +737,9 @@ func (s *Service) destroyAccount(ctx context.Context, a *model.Account) error {
 	return s.Collections.Accounts.Delete(ctx, a.Key)
 }
 
-func getAccount(ctx context.Context) (*mdb.AccountCtx, error) {
+func getAccount(ctx context.Context) (*model.AccountCtx, error) {
 	account, _ := mdb.AccountFromContext(ctx)
-	if account.Owner().Type == mdb.User {
+	if account.Owner().Type == model.User {
 		return nil, status.Errorf(codes.InvalidArgument, "account type not supported")
 	}
 	return account, nil

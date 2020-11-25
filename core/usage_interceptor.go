@@ -14,6 +14,7 @@ import (
 	"github.com/textileio/textile/v2/api/billingd/common"
 	"github.com/textileio/textile/v2/api/billingd/pb"
 	"github.com/textileio/textile/v2/buckets"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -78,15 +79,15 @@ func (t *Textile) preUsageFunc(ctx context.Context, method string) (context.Cont
 	now := time.Now()
 
 	// Collect new users.
-	if account.User != nil && account.User.CreatedAt.IsZero() && account.User.Type == mdb.User {
-		var powInfo *mdb.PowInfo
+	if account.User != nil && account.User.CreatedAt.IsZero() && account.User.Type == model.User {
+		var powInfo *model.PowInfo
 		if t.pc != nil {
 			ctxAdmin := context.WithValue(ctx, powc.AdminKey, t.conf.PowergateAdminToken)
 			res, err := t.pc.Admin.Users.Create(ctxAdmin)
 			if err != nil {
 				return ctx, err
 			}
-			powInfo = &mdb.PowInfo{ID: res.User.Id, Token: res.User.Token}
+			powInfo = &model.PowInfo{ID: res.User.Id, Token: res.User.Token}
 		}
 		user, err := t.collections.Accounts.CreateUser(ctx, account.User.Key, powInfo)
 		if err != nil {
@@ -105,7 +106,7 @@ func (t *Textile) preUsageFunc(ctx context.Context, method string) (context.Cont
 				return ctx, err
 			}
 			var opts []billing.Option
-			if account.Owner().Type == mdb.User {
+			if account.Owner().Type == model.User {
 				key, ok := mdb.APIKeyFromContext(ctx)
 				if !ok {
 					return ctx, status.Error(codes.PermissionDenied, "Bad API key")
@@ -236,7 +237,7 @@ func (t *Textile) postUsageFunc(ctx context.Context, method string) error {
 	return nil
 }
 
-func (t *Textile) getAccountCtxEmail(ctx context.Context, account *mdb.AccountCtx) (string, error) {
+func (t *Textile) getAccountCtxEmail(ctx context.Context, account *model.AccountCtx) (string, error) {
 	if account.User != nil {
 		return account.User.Email, nil
 	}
@@ -244,7 +245,7 @@ func (t *Textile) getAccountCtxEmail(ctx context.Context, account *mdb.AccountCt
 		return "", errors.New("invalid account context")
 	}
 	for _, m := range account.Org.Members {
-		if m.Role == mdb.OrgOwner {
+		if m.Role == model.OrgOwner {
 			owner, err := t.collections.Accounts.Get(ctx, m.Key)
 			if err != nil {
 				log.Errorf("getting org owner: %v", err)

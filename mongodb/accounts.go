@@ -30,65 +30,16 @@ func init() {
 	usernameRx = regexp.MustCompile(`^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)?$`)
 }
 
-type Account struct {
-	Type      AccountType
-	Key       thread.PubKey
-	Secret    thread.Identity
-	Name      string
-	Username  string
-	Email     string
-	Token     thread.Token
-	Members   []Member
-	PowInfo   *PowInfo
-	CreatedAt time.Time
-}
-
-type AccountType int
-
-const (
-	Dev AccountType = iota
-	Org
-	User
-)
-
-type Member struct {
-	Key      thread.PubKey
-	Username string
-	Role     Role
-}
-
-type Role int
-
-const (
-	OrgOwner Role = iota
-	OrgMember
-)
-
-func (r Role) String() (s string) {
-	switch r {
-	case OrgOwner:
-		s = "owner"
-	case OrgMember:
-		s = "member"
-	}
-	return
-}
-
-type AccountCtx struct {
-	User *Account
-	Org  *Account
-}
-
-func NewAccountContext(ctx context.Context, user, org *Account) context.Context {
-	return context.WithValue(ctx, ctxKey("account"), &AccountCtx{
+func NewAccountContext(ctx context.Context, user, org *model.Account) context.Context {
+	return context.WithValue(ctx, ctxKey("account"), &model.AccountCtx{
 		User: user,
 		Org:  org,
 	})
 }
 
-func AccountCtxForAccount(account *Account) *AccountCtx {
-	actx := &AccountCtx{}
-	if account.Type == Org {
+func AccountCtxForAccount(account *model.Account) *model.AccountCtx {
+	actx := &model.AccountCtx{}
+	if account.Type == model.Org {
 		actx.Org = account
 	} else {
 		actx.User = account
@@ -96,16 +47,9 @@ func AccountCtxForAccount(account *Account) *AccountCtx {
 	return actx
 }
 
-func AccountFromContext(ctx context.Context) (*AccountCtx, bool) {
-	acc, ok := ctx.Value(ctxKey("account")).(*AccountCtx)
+func AccountFromContext(ctx context.Context) (*model.AccountCtx, bool) {
+	acc, ok := ctx.Value(ctxKey("account")).(*model.AccountCtx)
 	return acc, ok
-}
-
-func (ac *AccountCtx) Owner() *Account {
-	if ac.Org != nil {
-		return ac.Org
-	}
-	return ac.User
 }
 
 type Accounts struct {
@@ -240,9 +184,9 @@ func (a *Accounts) CreateOrg(ctx context.Context, name string, members []model.M
 	return doc, nil
 }
 
-func (a *Accounts) CreateUser(ctx context.Context, key thread.PubKey, powInfo *PowInfo) (*Account, error) {
-	doc := &Account{
-		Type:      User,
+func (a *Accounts) CreateUser(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*model.Account, error) {
+	doc := &model.Account{
+		Type:      model.Dev,
 		Key:       key,
 		PowInfo:   powInfo,
 		CreatedAt: time.Now(),
@@ -291,7 +235,7 @@ func (a *Accounts) GetByUsername(ctx context.Context, username string) (*model.A
 	return decodeAccount(raw)
 }
 
-func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*Account, error) {
+func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*model.Account, error) {
 	res := a.col.FindOne(ctx, bson.D{
 		primitive.E{Key: "$or", Value: bson.A{
 			bson.D{
@@ -361,7 +305,7 @@ func (a *Accounts) SetToken(ctx context.Context, key thread.PubKey, token thread
 	return nil
 }
 
-func (a *Accounts) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *PowInfo) (*Account, error) {
+func (a *Accounts) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*model.Account, error) {
 	id, err := key.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -592,7 +536,7 @@ func (a *Accounts) Delete(ctx context.Context, key thread.PubKey) error {
 	return nil
 }
 
-func decodeAccount(raw bson.M) (*Account, error) {
+func decodeAccount(raw bson.M) (*model.Account, error) {
 	key := &thread.Libp2pPubKey{}
 	err := key.UnmarshalBinary(raw["_id"].(primitive.Binary).Data)
 	if err != nil {
@@ -643,8 +587,8 @@ func decodeAccount(raw bson.M) (*Account, error) {
 	if v, ok := raw["created_at"]; ok {
 		created = v.(primitive.DateTime).Time()
 	}
-	return &Account{
-		Type:      AccountType(raw["type"].(int32)),
+	return &model.Account{
+		Type:      model.AccountType(raw["type"].(int32)),
 		Key:       key,
 		Secret:    secret,
 		Name:      name,

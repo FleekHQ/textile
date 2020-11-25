@@ -23,7 +23,6 @@ type Collections struct {
 	IPNSKeys       *IPNSKeys
 	BucketArchives *BucketArchives
 	Accounts       *Accounts
-	Users          *Users
 	Invites        *Invites
 }
 
@@ -48,10 +47,6 @@ func NewCollections(ctx context.Context, storePath string, hub bool) (*Collectio
 		return nil, err
 	}
 	c.Accounts, err = NewAccounts(ctx, st)
-	if err != nil {
-		return nil, err
-	}
-	c.Users, err = NewUsers(ctx, st)
 	if err != nil {
 		return nil, err
 	}

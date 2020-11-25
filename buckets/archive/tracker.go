@@ -169,7 +169,7 @@ func (t *Tracker) trackArchiveProgress(
 	dbToken thread.Token,
 	jid string,
 	bucketRoot cid.Cid,
-	powInfo *mdb.PowInfo,
+	powInfo *model.PowInfo,
 ) (bool, string, error) {
 	log.Infof("querying archive status of job %s", jid)
 	defer log.Infof("finished querying archive status of job %s", jid)

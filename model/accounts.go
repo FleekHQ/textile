@@ -26,20 +26,6 @@ type Account struct {
 	PowInfo          *PowInfo
 }
 
-type AccountType int
-
-type Role int
-
-const (
-	Dev AccountType = iota
-	Org
-)
-
-const (
-	OrgOwner Role = iota
-	OrgMember
-)
-
 func (r Role) String() (s string) {
 	switch r {
 	case OrgOwner:
@@ -49,3 +35,30 @@ func (r Role) String() (s string) {
 	}
 	return
 }
+
+type AccountCtx struct {
+	User *Account
+	Org  *Account
+}
+
+type AccountType int
+
+type Role int
+
+const (
+	Dev AccountType = iota
+	Org
+	User
+)
+
+func (ac *AccountCtx) Owner() *Account {
+	if ac.Org != nil {
+		return ac.Org
+	}
+	return ac.User
+}
+
+const (
+	OrgOwner Role = iota
+	OrgMember
+)

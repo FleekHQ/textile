@@ -36,7 +36,6 @@ import (
 	"github.com/textileio/textile/v2/api/common"
 	"github.com/textileio/textile/v2/buckets"
 	"github.com/textileio/textile/v2/buckets/archive"
-	"github.com/textileio/textile/v2/collections"
 	"github.com/textileio/textile/v2/ipns"
 	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
@@ -77,7 +76,7 @@ var (
 	}
 
 	// @todo: Export the default storage config from powergate so we can create this from it.
-	defaultDefaultArchiveConfig = mdb.ArchiveConfig{
+	defaultDefaultArchiveConfig = model.ArchiveConfig{
 		RepFactor:       1,
 		DealMinDuration: powUtil.MinDealDuration,
 		FastRetrieval:   true,
@@ -2300,7 +2299,7 @@ func (s *Service) Archive(ctx context.Context, req *pb.ArchiveRequest) (*pb.Arch
 		if err != nil {
 			return fmt.Errorf("creating new powergate integration: %v", err)
 		}
-		_, err = s.Collections.Accounts.UpdatePowInfo(ctx, account.Owner().Key, &mdb.PowInfo{ID: res.User.Id, Token: res.User.Token})
+		_, err = s.Collections.Accounts.UpdatePowInfo(ctx, account.Owner().Key, &model.PowInfo{ID: res.User.Id, Token: res.User.Token})
 		if err != nil {
 			return fmt.Errorf("updating user/account with new powergate information: %v", err)
 		}
@@ -2603,7 +2602,7 @@ func (s *Service) ArchiveInfo(ctx context.Context, req *pb.ArchiveInfoRequest) (
 	}, nil
 }
 
-func toPbArchiveConfig(config *mdb.ArchiveConfig) *pb.ArchiveConfig {
+func toPbArchiveConfig(config *model.ArchiveConfig) *pb.ArchiveConfig {
 	var pbConfig *pb.ArchiveConfig
 	if config != nil {
 		pbConfig = &pb.ArchiveConfig{
@@ -2649,7 +2648,7 @@ func fromPbArchiveConfig(pbConfig *pb.ArchiveConfig) *model.ArchiveConfig {
 	return config
 }
 
-func toFilConfig(config *mdb.ArchiveConfig) *userPb.FilConfig {
+func toFilConfig(config *model.ArchiveConfig) *userPb.FilConfig {
 	if config == nil {
 		return nil
 	}

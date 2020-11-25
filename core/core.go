@@ -44,7 +44,6 @@ import (
 	"github.com/textileio/textile/v2/email"
 	"github.com/textileio/textile/v2/gateway"
 	"github.com/textileio/textile/v2/ipns"
-	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	tdb "github.com/textileio/textile/v2/threaddb"
 	"github.com/textileio/textile/v2/util"
@@ -119,8 +118,8 @@ var (
 
 type Textile struct {
 	collections *mdb.Collections
-
-	ts tc.NetBoostrapper
+	gencol      *collections.Collections
+	ts          tc.NetBoostrapper
 
 	th  *threads.Client
 	thn *netclient.Client
@@ -219,9 +218,22 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 			return nil, err
 		}
 	}
-	t.collections, err = mdb.NewCollections(ctx, conf.AddrMongoURI, conf.AddrMongoName, conf.Hub)
-	if err != nil {
-		return nil, err
+
+	if conf.Hub {
+		t.collections, err = mdb.NewCollections(ctx, conf.AddrMongoURI, conf.AddrMongoName, conf.Hub)
+		if err != nil {
+			return nil, err
+		}
+
+		t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithMongoCollectionOpts(conf.AddrMongoURI, conf.AddrMongoName), collections.WithBadgerCollectionOpts(conf.CollectionRepoPath))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		t.gencol, err = collections.NewCollections(ctx, conf.Hub, collections.WithBadgerCollectionOpts(conf.CollectionRepoPath))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	t.ipnsm, err = ipns.NewManager(t.gencol.IPNSKeys, ic.Key(), ic.Name(), conf.Debug)
@@ -261,7 +273,7 @@ func NewTextile(ctx context.Context, conf Config) (*Textile, error) {
 	if err != nil {
 		return nil, err
 	}
-	t.bucks, err = tdb.NewBuckets(t.th, t.pc, t.collections.BucketArchives)
+	t.bucks, err = tdb.NewBuckets(t.th, t.pc, t.gencol.BucketArchives)
 	if err != nil {
 		return nil, err
 	}
