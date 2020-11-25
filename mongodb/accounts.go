@@ -22,29 +22,90 @@ import (
 var (
 	usernameRx *regexp.Regexp
 
-	ErrInvalidUsername = fmt.Errorf("username may only contain alphanumeric characters or single hyphens, and cannot begin or end with a hyphen")
+	ErrInvalidUsername = fmt.Errorf("username may only contain alphanumeric characters or single hyphens, " +
+		"and cannot begin or end with a hyphen")
 )
 
 func init() {
 	usernameRx = regexp.MustCompile(`^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)?$`)
 }
 
-func NewDevContext(ctx context.Context, dev *model.Account) context.Context {
-	return context.WithValue(ctx, ctxKey("developer"), dev)
+type Account struct {
+	Type      AccountType
+	Key       thread.PubKey
+	Secret    thread.Identity
+	Name      string
+	Username  string
+	Email     string
+	Token     thread.Token
+	Members   []Member
+	PowInfo   *PowInfo
+	CreatedAt time.Time
 }
 
-func DevFromContext(ctx context.Context) (*model.Account, bool) {
-	dev, ok := ctx.Value(ctxKey("developer")).(*model.Account)
-	return dev, ok
+type AccountType int
+
+const (
+	Dev AccountType = iota
+	Org
+	User
+)
+
+type Member struct {
+	Key      thread.PubKey
+	Username string
+	Role     Role
 }
 
-func NewOrgContext(ctx context.Context, org *model.Account) context.Context {
-	return context.WithValue(ctx, ctxKey("org"), org)
+type Role int
+
+const (
+	OrgOwner Role = iota
+	OrgMember
+)
+
+func (r Role) String() (s string) {
+	switch r {
+	case OrgOwner:
+		s = "owner"
+	case OrgMember:
+		s = "member"
+	}
+	return
 }
 
-func OrgFromContext(ctx context.Context) (*model.Account, bool) {
-	org, ok := ctx.Value(ctxKey("org")).(*model.Account)
-	return org, ok
+type AccountCtx struct {
+	User *Account
+	Org  *Account
+}
+
+func NewAccountContext(ctx context.Context, user, org *Account) context.Context {
+	return context.WithValue(ctx, ctxKey("account"), &AccountCtx{
+		User: user,
+		Org:  org,
+	})
+}
+
+func AccountCtxForAccount(account *Account) *AccountCtx {
+	actx := &AccountCtx{}
+	if account.Type == Org {
+		actx.Org = account
+	} else {
+		actx.User = account
+	}
+	return actx
+}
+
+func AccountFromContext(ctx context.Context) (*AccountCtx, bool) {
+	acc, ok := ctx.Value(ctxKey("account")).(*AccountCtx)
+	return acc, ok
+}
+
+func (ac *AccountCtx) Owner() *Account {
+	if ac.Org != nil {
+		return ac.Org
+	}
+	return ac.User
 }
 
 type Accounts struct {
@@ -55,16 +116,20 @@ func NewAccounts(ctx context.Context, db *mongo.Database) (*Accounts, error) {
 	a := &Accounts{col: db.Collection("accounts")}
 	_, err := a.col.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
-			Keys: bson.D{{"username", 1}},
-			Options: options.Index().SetUnique(true).
-				SetCollation(&options.Collation{Locale: "en", Strength: 2}),
+			Keys: bson.D{primitive.E{Key: "username", Value: 1}},
+			Options: options.Index().
+				SetUnique(true).
+				SetCollation(&options.Collation{Locale: "en", Strength: 2}).
+				SetSparse(true),
 		},
 		{
-			Keys:    bson.D{{"email", 1}},
-			Options: options.Index().SetUnique(true).SetSparse(true),
+			Keys: bson.D{primitive.E{Key: "email", Value: 1}},
+			Options: options.Index().
+				SetUnique(true).
+				SetSparse(true),
 		},
 		{
-			Keys: bson.D{{"members._id", 1}},
+			Keys: bson.D{primitive.E{Key: "members._id", Value: 1}},
 		},
 	})
 	return a, err
@@ -84,8 +149,8 @@ func (a *Accounts) CreateDev(ctx context.Context, username, email string, powInf
 		Secret:    thread.NewLibp2pIdentity(sk),
 		Email:     email,
 		Username:  username,
-		CreatedAt: time.Now(),
 		PowInfo:   powInfo,
+		CreatedAt: time.Now(),
 	}
 	id, err := doc.Key.MarshalBinary()
 	if err != nil {
@@ -96,13 +161,12 @@ func (a *Accounts) CreateDev(ctx context.Context, username, email string, powInf
 		return nil, err
 	}
 	data := bson.M{
-		"_id":                id,
-		"type":               int32(doc.Type),
-		"secret":             secret,
-		"email":              doc.Email,
-		"username":           doc.Username,
-		"created_at":         doc.CreatedAt,
-		"buckets_total_size": int64(0),
+		"_id":        id,
+		"type":       int32(doc.Type),
+		"secret":     secret,
+		"email":      doc.Email,
+		"username":   doc.Username,
+		"created_at": doc.CreatedAt,
 	}
 	encodePowInfo(data, doc.PowInfo)
 	if _, err := a.col.InsertOne(ctx, data); err != nil {
@@ -137,8 +201,8 @@ func (a *Accounts) CreateOrg(ctx context.Context, name string, members []model.M
 		Name:      name,
 		Username:  slg,
 		Members:   members,
-		CreatedAt: time.Now(),
 		PowInfo:   powInfo,
+		CreatedAt: time.Now(),
 	}
 	id, err := doc.Key.MarshalBinary()
 	if err != nil {
@@ -176,25 +240,27 @@ func (a *Accounts) CreateOrg(ctx context.Context, name string, members []model.M
 	return doc, nil
 }
 
-func (a *Accounts) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*model.Account, error) {
-	id, err := key.MarshalBinary()
+func (a *Accounts) CreateUser(ctx context.Context, key thread.PubKey, powInfo *PowInfo) (*Account, error) {
+	doc := &Account{
+		Type:      User,
+		Key:       key,
+		PowInfo:   powInfo,
+		CreatedAt: time.Now(),
+	}
+	id, err := doc.Key.MarshalBinary()
 	if err != nil {
 		return nil, err
 	}
-	update := bson.M{}
-	encodePowInfo(update, powInfo)
-	res, err := a.col.UpdateOne(
-		ctx,
-		bson.M{"_id": id},
-		bson.M{"$set": update},
-	)
-	if err != nil {
+	data := bson.M{
+		"_id":        id,
+		"type":       int32(doc.Type),
+		"created_at": doc.CreatedAt,
+	}
+	encodePowInfo(data, doc.PowInfo)
+	if _, err := a.col.InsertOne(ctx, data); err != nil {
 		return nil, err
 	}
-	if res.ModifiedCount != 1 {
-		return nil, fmt.Errorf("should have modified 1 record but updated %v", res.ModifiedCount)
-	}
-	return a.Get(ctx, key)
+	return doc, nil
 }
 
 func (a *Accounts) Get(ctx context.Context, key thread.PubKey) (*model.Account, error) {
@@ -225,8 +291,17 @@ func (a *Accounts) GetByUsername(ctx context.Context, username string) (*model.A
 	return decodeAccount(raw)
 }
 
-func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*model.Account, error) {
-	res := a.col.FindOne(ctx, bson.D{{"$or", bson.A{bson.D{{"username", usernameOrEmail}}, bson.D{{"email", usernameOrEmail}}}}})
+func (a *Accounts) GetByUsernameOrEmail(ctx context.Context, usernameOrEmail string) (*Account, error) {
+	res := a.col.FindOne(ctx, bson.D{
+		primitive.E{Key: "$or", Value: bson.A{
+			bson.D{
+				primitive.E{Key: "username", Value: usernameOrEmail},
+			},
+			bson.D{
+				primitive.E{Key: "email", Value: usernameOrEmail},
+			},
+		}},
+	})
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
@@ -286,23 +361,25 @@ func (a *Accounts) SetToken(ctx context.Context, key thread.PubKey, token thread
 	return nil
 }
 
-func (a *Accounts) SetBucketsTotalSize(ctx context.Context, key thread.PubKey, newTotalSize int64) error {
+func (a *Accounts) UpdatePowInfo(ctx context.Context, key thread.PubKey, powInfo *PowInfo) (*Account, error) {
 	id, err := key.MarshalBinary()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Note: temporary fix for ensuring accounts don't go below zero. see #376
-	if 0 > newTotalSize {
-		newTotalSize = 0
-	}
-	res, err := a.col.UpdateOne(ctx, bson.M{"_id": id}, bson.M{"$set": bson.M{"buckets_total_size": newTotalSize}})
+	update := bson.M{}
+	encodePowInfo(update, powInfo)
+	res, err := a.col.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$set": update},
+	)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if res.MatchedCount == 0 {
-		return mongo.ErrNoDocuments
+	if res.ModifiedCount != 1 {
+		return nil, fmt.Errorf("should have modified 1 record but updated %v", res.ModifiedCount)
 	}
-	return nil
+	return a.Get(ctx, key)
 }
 
 func (a *Accounts) ListByMember(ctx context.Context, member thread.PubKey) ([]model.Account, error) {
@@ -439,7 +516,10 @@ func (a *Accounts) AddMember(ctx context.Context, username string, member model.
 		"username": member.Username,
 		"role":     int(member.Role),
 	}
-	_, err = a.col.UpdateOne(ctx, bson.M{"username": username, "members._id": bson.M{"$ne": mk}}, bson.M{"$push": bson.M{"members": raw}})
+	_, err = a.col.UpdateOne(ctx, bson.M{
+		"username":    username,
+		"members._id": bson.M{"$ne": mk},
+	}, bson.M{"$push": bson.M{"members": raw}})
 	return err
 }
 
@@ -450,8 +530,8 @@ func (a *Accounts) RemoveMember(ctx context.Context, username string, member thr
 	}
 	if isOwner { // Ensure there will still be at least one owner left
 		cursor, err := a.col.Aggregate(ctx, mongo.Pipeline{
-			bson.D{{"$match", bson.M{"username": username}}},
-			bson.D{{"$project", bson.M{
+			bson.D{primitive.E{Key: "$match", Value: bson.M{"username": username}}},
+			bson.D{primitive.E{Key: "$project", Value: bson.M{
 				"members": bson.M{
 					"$filter": bson.M{
 						"input": "$members",
@@ -460,8 +540,8 @@ func (a *Accounts) RemoveMember(ctx context.Context, username string, member thr
 					},
 				},
 			}}},
-			bson.D{{"$count", "members"}},
-		}, options.Aggregate().SetHint(bson.D{{"username", 1}}))
+			bson.D{primitive.E{Key: "$count", Value: "members"}},
+		}, options.Aggregate().SetHint(bson.D{primitive.E{Key: "username", Value: 1}}))
 		if err != nil {
 			return err
 		}
@@ -485,7 +565,9 @@ func (a *Accounts) RemoveMember(ctx context.Context, username string, member thr
 	if err != nil {
 		return err
 	}
-	res, err := a.col.UpdateOne(ctx, bson.M{"username": username}, bson.M{"$pull": bson.M{"members": bson.M{"_id": mid}}})
+	res, err := a.col.UpdateOne(ctx, bson.M{
+		"username": username,
+	}, bson.M{"$pull": bson.M{"members": bson.M{"_id": mid}}})
 	if err != nil {
 		return err
 	}
@@ -510,22 +592,29 @@ func (a *Accounts) Delete(ctx context.Context, key thread.PubKey) error {
 	return nil
 }
 
-func decodeAccount(raw bson.M) (*model.Account, error) {
-	var name, email string
+func decodeAccount(raw bson.M) (*Account, error) {
+	key := &thread.Libp2pPubKey{}
+	err := key.UnmarshalBinary(raw["_id"].(primitive.Binary).Data)
+	if err != nil {
+		return nil, err
+	}
+	var username, name, email string
+	if v, ok := raw["username"]; ok {
+		username = v.(string)
+	}
 	if v, ok := raw["name"]; ok {
 		name = v.(string)
 	}
 	if v, ok := raw["email"]; ok {
 		email = v.(string)
 	}
-	var totalSize int64
-	if v, ok := raw["buckets_total_size"]; ok {
-		totalSize = v.(int64)
-	}
-	secret := &thread.Libp2pIdentity{}
-	err := secret.UnmarshalBinary(raw["secret"].(primitive.Binary).Data)
-	if err != nil {
-		return nil, err
+	var secret *thread.Libp2pIdentity
+	if v, ok := raw["secret"]; ok {
+		secret = &thread.Libp2pIdentity{}
+		err := secret.UnmarshalBinary(v.(primitive.Binary).Data)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var token thread.Token
 	if v, ok := raw["token"]; ok {
@@ -554,17 +643,16 @@ func decodeAccount(raw bson.M) (*model.Account, error) {
 	if v, ok := raw["created_at"]; ok {
 		created = v.(primitive.DateTime).Time()
 	}
-	return &model.Account{
-		Type:             model.AccountType(raw["type"].(int32)),
-		Key:              secret.GetPublic(),
-		Secret:           secret,
-		Name:             name,
-		Username:         raw["username"].(string),
-		Email:            email,
-		Token:            token,
-		Members:          mems,
-		BucketsTotalSize: totalSize,
-		CreatedAt:        created,
-		PowInfo:          decodePowInfo(raw),
+	return &Account{
+		Type:      AccountType(raw["type"].(int32)),
+		Key:       key,
+		Secret:    secret,
+		Name:      name,
+		Username:  username,
+		Email:     email,
+		Token:     token,
+		Members:   mems,
+		PowInfo:   decodePowInfo(raw),
+		CreatedAt: created,
 	}, nil
 }

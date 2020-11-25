@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/textileio/textile/v2/mongodb/migrations"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -28,19 +29,19 @@ type Collections struct {
 	IPNSKeys        *IPNSKeys
 	BucketArchives  *BucketArchives
 	ArchiveTracking *ArchiveTracking
-
-	Users *Users
 }
 
 // NewCollections gets or create store instances for active collections.
-func NewCollections(ctx context.Context, uri, dbName string, hub bool) (*Collections, error) {
-	m, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+func NewCollections(ctx context.Context, uri, database string, hub bool) (*Collections, error) {
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
-	db := m.Database(dbName)
-	c := &Collections{m: m}
-
+	db := client.Database(database)
+	if err = migrations.Migrate(db); err != nil {
+		return nil, err
+	}
+	c := &Collections{m: client}
 	if hub {
 		c.Sessions, err = NewSessions(ctx, db)
 		if err != nil {
@@ -59,10 +60,6 @@ func NewCollections(ctx context.Context, uri, dbName string, hub bool) (*Collect
 			return nil, err
 		}
 		c.APIKeys, err = NewAPIKeys(ctx, db)
-		if err != nil {
-			return nil, err
-		}
-		c.Users, err = NewUsers(ctx, db)
 		if err != nil {
 			return nil, err
 		}

@@ -45,9 +45,9 @@ func (k *BucketArchives) GetOrCreate(ctx context.Context, bucketKey string) (*mo
 			return nil, res.Err()
 		}
 	}
-	var raw model.BucketArchive
-	if err := res.Decode(&raw); err != nil {
+	var doc BucketArchive
+	if err := res.Decode(&doc); err != nil {
 		return nil, err
 	}
-	return &raw, nil
+	return &doc, nil
 }

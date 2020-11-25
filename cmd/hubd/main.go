@@ -13,7 +13,12 @@ import (
 	"github.com/textileio/textile/v2/core"
 )
 
-const daemonName = "hubd"
+const (
+	daemonName = "hubd"
+
+	mib = 1024 * 1024
+	gib = 1024 * mib
+)
 
 var (
 	log = logging.Logger(daemonName)
@@ -43,6 +48,14 @@ var (
 				Key:      "addr.api_proxy",
 				DefValue: "/ip4/127.0.0.1/tcp/3007",
 			},
+			"addrMongoUri": {
+				Key:      "addr.mongo_uri",
+				DefValue: "mongodb://127.0.0.1:27017",
+			},
+			"addrMongoName": {
+				Key:      "addr.mongo_name",
+				DefValue: "textile",
+			},
 			"addrThreadsHost": {
 				Key:      "addr.threads.host",
 				DefValue: "/ip4/0.0.0.0/tcp/4006",
@@ -59,13 +72,13 @@ var (
 				Key:      "addr.ipfs.api",
 				DefValue: "/ip4/127.0.0.1/tcp/5001",
 			},
+			"addrBillingApi": {
+				Key:      "addr.billing.api",
+				DefValue: "",
+			},
 			"addrPowergateApi": {
 				Key:      "addr.powergate.api",
 				DefValue: "",
-			},
-			"addrMongoUri": {
-				Key:      "addr.mongo_uri",
-				DefValue: "mongodb://127.0.0.1:27017",
 			},
 			"gatewaySubdomains": {
 				Key:      "gateway.subdomains",
@@ -101,19 +114,15 @@ var (
 			},
 			"bucketsMaxSize": {
 				Key:      "buckets.max_size",
-				DefValue: int64(1073741824),
-			},
-			"bucketsTotalMaxSize": {
-				Key:      "buckets.total_max_size",
-				DefValue: int64(1073741824),
-			},
-			"bucketsMaxNumberPerThread": {
-				Key:      "buckets.max_number_per_thread",
-				DefValue: 10000,
+				DefValue: int64(4 * gib),
 			},
 			"threadsMaxNumberPerOwner": {
 				Key:      "threads.max_number_per_owner",
 				DefValue: 100,
+			},
+			"powergateAdminToken": {
+				Key:      "powergate.admin_token",
+				DefValue: "",
 			},
 		},
 		EnvPre: "HUB",
@@ -155,6 +164,14 @@ func init() {
 		config.Flags["addrApiProxy"].DefValue.(string),
 		"Hub API proxy listen address")
 	rootCmd.PersistentFlags().String(
+		"addrMongoUri",
+		config.Flags["addrMongoUri"].DefValue.(string),
+		"MongoDB connection URI")
+	rootCmd.PersistentFlags().String(
+		"addrMongoName",
+		config.Flags["addrMongoName"].DefValue.(string),
+		"MongoDB database name")
+	rootCmd.PersistentFlags().String(
 		"addrThreadsHost",
 		config.Flags["addrThreadsHost"].DefValue.(string),
 		"Threads peer host listen address")
@@ -171,13 +188,13 @@ func init() {
 		config.Flags["addrIpfsApi"].DefValue.(string),
 		"IPFS API address")
 	rootCmd.PersistentFlags().String(
+		"addrBillingApi",
+		config.Flags["addrBillingApi"].DefValue.(string),
+		"Billing API address")
+	rootCmd.PersistentFlags().String(
 		"addrPowergateApi",
 		config.Flags["addrPowergateApi"].DefValue.(string),
 		"Powergate API address")
-	rootCmd.PersistentFlags().String(
-		"addrMongoUri",
-		config.Flags["addrMongoUri"].DefValue.(string),
-		"MongoDB connection URI")
 
 	// Gateway settings
 	rootCmd.PersistentFlags().Bool(
@@ -222,20 +239,18 @@ func init() {
 		"bucketsMaxSize",
 		config.Flags["bucketsMaxSize"].DefValue.(int64),
 		"Bucket max size in bytes")
-	rootCmd.PersistentFlags().Int64(
-		"bucketsTotalMaxSize",
-		config.Flags["bucketsTotalMaxSize"].DefValue.(int64),
-		"Total max size of buckets per account")
-	rootCmd.PersistentFlags().Int(
-		"bucketsMaxNumberPerThread",
-		config.Flags["bucketsMaxNumberPerThread"].DefValue.(int),
-		"Max number of buckets per thread")
 
 	// Thread settings
 	rootCmd.PersistentFlags().Int(
 		"threadsMaxNumberPerOwner",
 		config.Flags["threadsMaxNumberPerOwner"].DefValue.(int),
 		"Max number threads per owner")
+
+	// Auth tokens
+	rootCmd.PersistentFlags().String(
+		"powergateAdminToken",
+		config.Flags["powergateAdminToken"].DefValue.(string),
+		"Auth token for Powergate admin APIs")
 
 	err := cmd.BindFlags(config.Viper, rootCmd, config.Flags)
 	cmd.ErrCheck(err)
@@ -267,15 +282,17 @@ var rootCmd = &cobra.Command{
 
 		addrApi := cmd.AddrFromStr(config.Viper.GetString("addr.api"))
 		addrApiProxy := cmd.AddrFromStr(config.Viper.GetString("addr.api_proxy"))
+
+		addrMongoUri := config.Viper.GetString("addr.mongo_uri")
+		addrMongoName := config.Viper.GetString("addr.mongo_name")
+
 		addrThreadsHost := cmd.AddrFromStr(config.Viper.GetString("addr.threads.host"))
 		addrIpfsApi := cmd.AddrFromStr(config.Viper.GetString("addr.ipfs.api"))
-
+		addrBillingApi := config.Viper.GetString("addr.billing.api")
 		addrPowergateApi := config.Viper.GetString("addr.powergate.api")
 
 		addrGatewayHost := cmd.AddrFromStr(config.Viper.GetString("addr.gateway.host"))
 		addrGatewayUrl := config.Viper.GetString("addr.gateway.url")
-
-		addrMongoUri := config.Viper.GetString("addr.mongo_uri")
 
 		dnsDomain := config.Viper.GetString("dns.domain")
 		dnsZoneID := config.Viper.GetString("dns.zone_id")
@@ -287,10 +304,9 @@ var rootCmd = &cobra.Command{
 		emailSessionSecret := config.Viper.GetString("email.session_secret")
 
 		bucketsMaxSize := config.Viper.GetInt64("buckets.max_size")
-		bucketsTotalMaxSize := config.Viper.GetInt64("buckets.total_max_size")
-		bucketsMaxNumberPerThread := config.Viper.GetInt("buckets.max_number_per_thread")
-
 		threadsMaxNumberPerOwner := config.Viper.GetInt("threads.max_number_per_owner")
+
+		powergateAdminToken := config.Viper.GetString("powergate.admin_token")
 
 		logFile := config.Viper.GetString("log.file")
 		if logFile != "" {
@@ -303,18 +319,21 @@ var rootCmd = &cobra.Command{
 		textile, err := core.NewTextile(ctx, core.Config{
 			RepoPath: config.Viper.GetString("repo"),
 
-			AddrAPI:          addrApi,
-			AddrAPIProxy:     addrApiProxy,
+			AddrAPI:      addrApi,
+			AddrAPIProxy: addrApiProxy,
+
 			AddrThreadsHost:  addrThreadsHost,
 			AddrIPFSAPI:      addrIpfsApi,
-			AddrGatewayHost:  addrGatewayHost,
-			AddrGatewayURL:   addrGatewayUrl,
+			AddrBillingAPI:   addrBillingApi,
 			AddrPowergateAPI: addrPowergateApi,
-			AddrMongoURI:     addrMongoUri,
+
+			AddrMongoURI:  addrMongoUri,
+			AddrMongoName: addrMongoName,
+
+			AddrGatewayHost: addrGatewayHost,
+			AddrGatewayURL:  addrGatewayUrl,
 
 			UseSubdomains: config.Viper.GetBool("gateway.subdomains"),
-
-			MongoName: "textile",
 
 			DNSDomain: dnsDomain,
 			DNSZoneID: dnsZoneID,
@@ -325,22 +344,24 @@ var rootCmd = &cobra.Command{
 			EmailAPIKey:        emailApiKey,
 			EmailSessionSecret: emailSessionSecret,
 
-			BucketsMaxSize:            bucketsMaxSize,
-			BucketsTotalMaxSize:       bucketsTotalMaxSize,
-			BucketsMaxNumberPerThread: bucketsMaxNumberPerThread,
-
-			ThreadsMaxNumberPerOwner: threadsMaxNumberPerOwner,
+			MaxBucketSize:            bucketsMaxSize,
+			MaxNumberThreadsPerOwner: threadsMaxNumberPerOwner,
 
 			Hub:   true,
 			Debug: config.Viper.GetBool("log.debug"),
+
+			PowergateAdminToken: powergateAdminToken,
 		})
 		cmd.ErrCheck(err)
-		defer textile.Close(false)
 		textile.Bootstrap()
 
 		fmt.Println("Welcome to the Hub!")
 		fmt.Println("Your peer ID is " + textile.HostID().String())
 
-		select {}
+		cmd.HandleInterrupt(func() {
+			if err := textile.Close(false); err != nil {
+				fmt.Println(err.Error())
+			}
+		})
 	},
 }

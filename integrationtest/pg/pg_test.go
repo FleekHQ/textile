@@ -14,10 +14,10 @@ import (
 	"github.com/textileio/go-threads/core/thread"
 	tutil "github.com/textileio/go-threads/util"
 	"github.com/textileio/textile/v2/api/apitest"
-	c "github.com/textileio/textile/v2/api/buckets/client"
-	pb "github.com/textileio/textile/v2/api/buckets/pb"
+	c "github.com/textileio/textile/v2/api/bucketsd/client"
+	pb "github.com/textileio/textile/v2/api/bucketsd/pb"
 	"github.com/textileio/textile/v2/api/common"
-	hc "github.com/textileio/textile/v2/api/hub/client"
+	hc "github.com/textileio/textile/v2/api/hubd/client"
 	"github.com/textileio/textile/v2/buckets/archive"
 	"github.com/textileio/textile/v2/core"
 	"github.com/textileio/textile/v2/util"
@@ -35,18 +35,18 @@ func TestCreateBucket(t *testing.T) {
 	ctx, _, client, shutdown := setup(t)
 	defer shutdown(true)
 
-	// FFS is now created for the user, so it should exist after spinup
-	lst, err := powc.FFS.ListAPI(ctx)
+	// User is now created, so it should exist after spinup.
+	res, err := powc.Admin.Users.List(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(lst))
+	require.Equal(t, 1, len(res.Users))
 
 	_, err = client.Create(ctx)
 	require.NoError(t, err)
 
-	// No new FFS instance should be created for the bucket
-	lst, err = powc.FFS.ListAPI(ctx)
+	// No new user should be created for the bucket.
+	res, err = powc.Admin.Users.List(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(lst))
+	require.Equal(t, 1, len(res.Users))
 }
 
 func TestArchiveTracker(t *testing.T) {
@@ -233,6 +233,7 @@ func archiveFinalState(ctx context.Context, t util.TestingTWithCleanup, client *
 			t.Errorf("unknown archive status")
 			t.FailNow()
 		}
+
 		return false
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/textileio/textile/v2/api/users/client"
+	"github.com/textileio/textile/v2/api/usersd/client"
 	. "github.com/textileio/textile/v2/mail/local"
 )
 
@@ -139,6 +139,7 @@ func (c *eventCollector) collect(events chan MailboxEvent) {
 }
 
 func (c *eventCollector) check(t *testing.T, numNew, numRead, numDeleted int) {
+	time.Sleep(time.Second)
 	c.Lock()
 	defer c.Unlock()
 	assert.Equal(t, numNew, c.new)
