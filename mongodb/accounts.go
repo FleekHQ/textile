@@ -186,7 +186,7 @@ func (a *Accounts) CreateOrg(ctx context.Context, name string, members []model.M
 
 func (a *Accounts) CreateUser(ctx context.Context, key thread.PubKey, powInfo *model.PowInfo) (*model.Account, error) {
 	doc := &model.Account{
-		Type:      model.Dev,
+		Type:      model.User,
 		Key:       key,
 		PowInfo:   powInfo,
 		CreatedAt: time.Now(),

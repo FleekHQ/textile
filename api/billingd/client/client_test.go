@@ -17,7 +17,7 @@ import (
 	"github.com/textileio/textile/v2/api/apitest"
 	"github.com/textileio/textile/v2/api/billingd/client"
 	"github.com/textileio/textile/v2/api/billingd/service"
-	mdb "github.com/textileio/textile/v2/mongodb"
+	"github.com/textileio/textile/v2/model"
 	"github.com/textileio/textile/v2/util"
 	"google.golang.org/grpc"
 )
@@ -39,15 +39,15 @@ func TestClient_CreateCustomer(t *testing.T) {
 
 	key := newKey(t)
 	email := apitest.NewEmail()
-	_, err := c.CreateCustomer(context.Background(), key, email, mdb.Dev)
+	_, err := c.CreateCustomer(context.Background(), key, email, model.Dev)
 	require.NoError(t, err)
 
 	_, err = c.CreateCustomer(
 		context.Background(),
 		newKey(t),
 		apitest.NewEmail(),
-		mdb.User,
-		client.WithParent(key, email, mdb.Dev),
+		model.User,
+		client.WithParent(key, email, model.Dev),
 	)
 	require.NoError(t, err)
 
@@ -56,8 +56,8 @@ func TestClient_CreateCustomer(t *testing.T) {
 		context.Background(),
 		newKey(t),
 		apitest.NewEmail(),
-		mdb.User,
-		client.WithParent(nonExistentParentKey, apitest.NewEmail(), mdb.Dev),
+		model.User,
+		client.WithParent(nonExistentParentKey, apitest.NewEmail(), model.Dev),
 	)
 	require.NoError(t, err)
 
@@ -71,7 +71,7 @@ func TestClient_GetCustomer(t *testing.T) {
 	t.Parallel()
 	c := setup(t)
 	key := newKey(t)
-	_, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	_, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	cus, err := c.GetCustomer(context.Background(), key)
@@ -88,7 +88,7 @@ func TestClient_GetCustomerSession(t *testing.T) {
 	t.Parallel()
 	c := setup(t)
 	key := newKey(t)
-	_, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	_, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	session, err := c.GetCustomerSession(context.Background(), key)
@@ -101,7 +101,7 @@ func TestClient_ListDependentCustomers(t *testing.T) {
 	c := setup(t)
 	key := newKey(t)
 	email := apitest.NewEmail()
-	_, err := c.CreateCustomer(context.Background(), key, email, mdb.Org)
+	_, err := c.CreateCustomer(context.Background(), key, email, model.Org)
 	require.NoError(t, err)
 
 	for i := 0; i < 30; i++ {
@@ -109,8 +109,8 @@ func TestClient_ListDependentCustomers(t *testing.T) {
 			context.Background(),
 			newKey(t),
 			apitest.NewEmail(),
-			mdb.User,
-			client.WithParent(key, email, mdb.Org),
+			model.User,
+			client.WithParent(key, email, model.Org),
 		)
 		require.NoError(t, err)
 		time.Sleep(time.Second)
@@ -141,7 +141,7 @@ func TestClient_UpdateCustomer(t *testing.T) {
 	t.Parallel()
 	c := setup(t)
 	key := newKey(t)
-	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	err = c.UpdateCustomer(context.Background(), id, 100, true, true)
@@ -158,7 +158,7 @@ func TestClient_UpdateCustomerSubscription(t *testing.T) {
 	t.Parallel()
 	c := setup(t)
 	key := newKey(t)
-	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	start := time.Now().Add(-time.Hour).Unix()
@@ -175,7 +175,7 @@ func TestClient_RecreateCustomerSubscription(t *testing.T) {
 	t.Parallel()
 	c := setup(t)
 	key := newKey(t)
-	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	err = c.RecreateCustomerSubscription(context.Background(), key)
@@ -198,7 +198,7 @@ func TestClient_DeleteCustomer(t *testing.T) {
 	t.Parallel()
 	c := setup(t)
 	key := newKey(t)
-	_, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	_, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	err = c.DeleteCustomer(context.Background(), key)
@@ -227,7 +227,7 @@ func TestClient_GetCustomerUsage(t *testing.T) {
 func getCustomerUsage(t *testing.T, test usageTest) {
 	c := setup(t)
 	key := newKey(t)
-	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), mdb.Dev)
+	id, err := c.CreateCustomer(context.Background(), key, apitest.NewEmail(), model.Dev)
 	require.NoError(t, err)
 
 	product := getProduct(t, test.key)
@@ -265,7 +265,7 @@ func incCustomerUsage(t *testing.T, test usageTest) {
 	c := setup(t)
 	key := newKey(t)
 	email := apitest.NewEmail()
-	id, err := c.CreateCustomer(context.Background(), key, email, mdb.Dev)
+	id, err := c.CreateCustomer(context.Background(), key, email, model.Dev)
 	require.NoError(t, err)
 
 	product := getProduct(t, test.key)
@@ -306,8 +306,8 @@ func incCustomerUsage(t *testing.T, test usageTest) {
 		context.Background(),
 		childKey,
 		apitest.NewEmail(),
-		mdb.User,
-		client.WithParent(key, email, mdb.Dev),
+		model.User,
+		client.WithParent(key, email, model.Dev),
 	)
 	require.NoError(t, err)
 	res, err = c.IncCustomerUsage(context.Background(), childKey, map[string]int64{test.key: product.UnitSize})
