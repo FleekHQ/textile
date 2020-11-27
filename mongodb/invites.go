@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/textileio/go-threads/core/thread"
+	"github.com/textileio/textile/v2/model"
 	"github.com/textileio/textile/v2/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -14,15 +15,6 @@ import (
 const (
 	inviteDur = time.Hour * 24 * 7 * 30
 )
-
-type Invite struct {
-	Token     string
-	Org       string
-	From      thread.PubKey
-	EmailTo   string
-	Accepted  bool
-	ExpiresAt time.Time
-}
 
 type Invites struct {
 	col *mongo.Collection
@@ -44,8 +36,8 @@ func NewInvites(ctx context.Context, db *mongo.Database) (*Invites, error) {
 	return i, err
 }
 
-func (i *Invites) Create(ctx context.Context, from thread.PubKey, org, emailTo string) (*Invite, error) {
-	doc := &Invite{
+func (i *Invites) Create(ctx context.Context, from thread.PubKey, org, emailTo string) (*model.Invite, error) {
+	doc := &model.Invite{
 		Token:     util.MakeToken(tokenLen),
 		Org:       org,
 		From:      from,
@@ -70,7 +62,7 @@ func (i *Invites) Create(ctx context.Context, from thread.PubKey, org, emailTo s
 	return doc, nil
 }
 
-func (i *Invites) Get(ctx context.Context, token string) (*Invite, error) {
+func (i *Invites) Get(ctx context.Context, token string) (*model.Invite, error) {
 	res := i.col.FindOne(ctx, bson.M{"_id": token})
 	if res.Err() != nil {
 		return nil, res.Err()
@@ -82,13 +74,13 @@ func (i *Invites) Get(ctx context.Context, token string) (*Invite, error) {
 	return decodeInvite(raw)
 }
 
-func (i *Invites) ListByEmail(ctx context.Context, email string) ([]Invite, error) {
+func (i *Invites) ListByEmail(ctx context.Context, email string) ([]model.Invite, error) {
 	cursor, err := i.col.Find(ctx, bson.M{"email_to": email})
 	if err != nil {
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	var docs []Invite
+	var docs []model.Invite
 	for cursor.Next(ctx) {
 		var raw bson.M
 		if err := cursor.Decode(&raw); err != nil {
@@ -151,7 +143,7 @@ func (i *Invites) DeleteByFromAndOrg(ctx context.Context, from thread.PubKey, or
 	return err
 }
 
-func decodeInvite(raw bson.M) (*Invite, error) {
+func decodeInvite(raw bson.M) (*model.Invite, error) {
 	from := &thread.Libp2pPubKey{}
 	err := from.UnmarshalBinary(raw["from_id"].(primitive.Binary).Data)
 	if err != nil {
@@ -161,7 +153,7 @@ func decodeInvite(raw bson.M) (*Invite, error) {
 	if v, ok := raw["expires_at"]; ok {
 		expiry = v.(primitive.DateTime).Time()
 	}
-	return &Invite{
+	return &model.Invite{
 		Token:     raw["_id"].(string),
 		Org:       raw["org"].(string),
 		From:      from,

@@ -2,19 +2,19 @@ package client
 
 import (
 	"github.com/textileio/go-threads/core/thread"
-	mdb "github.com/textileio/textile/v2/mongodb"
+	"github.com/textileio/textile/v2/model"
 )
 
 type options struct {
 	parentKey         thread.PubKey
 	parentEmail       string
-	parentAccountType mdb.AccountType
+	parentAccountType model.AccountType
 }
 
 type Option func(*options)
 
 // WithParent is used to create a billing hierarchy between two customers.
-func WithParent(key thread.PubKey, email string, accountType mdb.AccountType) Option {
+func WithParent(key thread.PubKey, email string, accountType model.AccountType) Option {
 	return func(args *options) {
 		args.parentKey = key
 		args.parentEmail = email

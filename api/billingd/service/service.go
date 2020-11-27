@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FleekHQ/textile/v2/model"
 	logging "github.com/ipfs/go-log"
 	ma "github.com/multiformats/go-multiaddr"
 	cron "github.com/robfig/cron/v3"
@@ -21,7 +22,6 @@ import (
 	"github.com/textileio/textile/v2/api/billingd/common"
 	"github.com/textileio/textile/v2/api/billingd/gateway"
 	pb "github.com/textileio/textile/v2/api/billingd/pb"
-	mdb "github.com/textileio/textile/v2/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -123,17 +123,17 @@ var Products = []Product{
 }
 
 type Customer struct {
-	Key                string          `bson:"_id"`
-	CustomerID         string          `bson:"customer_id"`
-	ParentKey          string          `bson:"parent_key"`
-	Email              string          `bson:"email"`
-	AccountType        mdb.AccountType `bson:"account_type"`
-	SubscriptionStatus string          `bson:"subscription_status"`
-	Balance            int64           `bson:"balance"`
-	Billable           bool            `bson:"billable"`
-	Delinquent         bool            `bson:"delinquent"`
-	CreatedAt          int64           `bson:"created_at"`
-	GracePeriodStart   int64           `bson:"grace_period_start"`
+	Key                string            `bson:"_id"`
+	CustomerID         string            `bson:"customer_id"`
+	ParentKey          string            `bson:"parent_key"`
+	Email              string            `bson:"email"`
+	AccountType        model.AccountType `bson:"account_type"`
+	SubscriptionStatus string            `bson:"subscription_status"`
+	Balance            int64             `bson:"balance"`
+	Billable           bool              `bson:"billable"`
+	Delinquent         bool              `bson:"delinquent"`
+	CreatedAt          int64             `bson:"created_at"`
+	GracePeriodStart   int64             `bson:"grace_period_start"`
 
 	InvoicePeriod Period `bson:"invoice_period"`
 
@@ -455,7 +455,7 @@ func (s *Service) createCustomer(
 		Key:         params.Key,
 		ParentKey:   parentKey,
 		Email:       params.Email,
-		AccountType: mdb.AccountType(params.AccountType),
+		AccountType: model.AccountType(params.AccountType),
 		CreatedAt:   time.Now().Unix(),
 	}
 	if _, err := s.cdb.InsertOne(ctx, doc); err != nil {

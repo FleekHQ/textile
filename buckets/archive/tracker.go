@@ -13,6 +13,7 @@ import (
 	powc "github.com/textileio/powergate/api/client"
 	userPb "github.com/textileio/powergate/api/gen/powergate/user/v1"
 	"github.com/textileio/textile/v2/api/common"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	tdb "github.com/textileio/textile/v2/threaddb"
 )
@@ -168,7 +169,7 @@ func (t *Tracker) trackArchiveProgress(
 	dbToken thread.Token,
 	jid string,
 	bucketRoot cid.Cid,
-	powInfo *mdb.PowInfo,
+	powInfo *model.PowInfo,
 ) (bool, string, error) {
 	log.Infof("querying archive status of job %s", jid)
 	defer log.Infof("finished querying archive status of job %s", jid)

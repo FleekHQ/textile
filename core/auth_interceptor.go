@@ -8,6 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/textileio/go-threads/core/thread"
 	"github.com/textileio/textile/v2/api/common"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -85,7 +86,7 @@ func (t *Textile) newAuthCtx(ctx context.Context, method string, touchSession bo
 			return ctx, status.Error(codes.NotFound, "User not found")
 		}
 
-		var org *mdb.Account
+		var org *model.Account
 		orgSlug, ok := common.OrgSlugFromMD(ctx)
 		if ok {
 			isMember, err := t.collections.Accounts.IsMember(ctx, orgSlug, dev.Key)
@@ -131,9 +132,9 @@ func (t *Textile) newAuthCtx(ctx context.Context, method string, touchSession bo
 				return ctx, status.Error(codes.NotFound, "Account not found")
 			}
 			switch acc.Type {
-			case mdb.Dev:
+			case model.Dev:
 				ctx = mdb.NewAccountContext(ctx, acc, nil)
-			case mdb.Org:
+			case model.Org:
 				ctx = mdb.NewAccountContext(ctx, nil, acc)
 			}
 			ctx = thread.NewTokenContext(ctx, acc.Token)
@@ -154,7 +155,7 @@ func (t *Textile) newAuthCtx(ctx context.Context, method string, touchSession bo
 				}
 				if user == nil {
 					// Attach a temp user context that will be accessible in the next interceptor.
-					user = &mdb.Account{Key: ukey, Type: mdb.User}
+					user = &model.Account{Key: ukey, Type: model.User}
 				}
 				ctx = mdb.NewAccountContext(ctx, user, nil)
 			} else if method != "/threads.pb.API/GetToken" && method != "/threads.net.pb.API/GetToken" {

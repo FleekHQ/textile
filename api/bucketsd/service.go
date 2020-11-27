@@ -37,6 +37,7 @@ import (
 	"github.com/textileio/textile/v2/buckets"
 	"github.com/textileio/textile/v2/buckets/archive"
 	"github.com/textileio/textile/v2/ipns"
+	"github.com/textileio/textile/v2/model"
 	mdb "github.com/textileio/textile/v2/mongodb"
 	tdb "github.com/textileio/textile/v2/threaddb"
 	"github.com/textileio/textile/v2/util"
@@ -75,7 +76,7 @@ var (
 	}
 
 	// @todo: Export the default storage config from powergate so we can create this from it.
-	defaultDefaultArchiveConfig = mdb.ArchiveConfig{
+	defaultDefaultArchiveConfig = model.ArchiveConfig{
 		RepFactor:       1,
 		DealMinDuration: powUtil.MinDealDuration,
 		FastRetrieval:   true,
@@ -2298,7 +2299,7 @@ func (s *Service) Archive(ctx context.Context, req *pb.ArchiveRequest) (*pb.Arch
 		if err != nil {
 			return fmt.Errorf("creating new powergate integration: %v", err)
 		}
-		_, err = s.Collections.Accounts.UpdatePowInfo(ctx, account.Owner().Key, &mdb.PowInfo{ID: res.User.Id, Token: res.User.Token})
+		_, err = s.Collections.Accounts.UpdatePowInfo(ctx, account.Owner().Key, &model.PowInfo{ID: res.User.Id, Token: res.User.Token})
 		if err != nil {
 			return fmt.Errorf("updating user/account with new powergate information: %v", err)
 		}
@@ -2338,7 +2339,7 @@ func (s *Service) Archive(ctx context.Context, req *pb.ArchiveRequest) (*pb.Arch
 		return nil, fmt.Errorf("getting bucket archive data: %s", err)
 	}
 
-	var archiveConfig *mdb.ArchiveConfig
+	var archiveConfig *model.ArchiveConfig
 	if req.ArchiveConfig != nil {
 		archiveConfig = fromPbArchiveConfig(req.ArchiveConfig)
 	} else if ba.DefaultArchiveConfig != nil {
@@ -2479,7 +2480,7 @@ func (s *Service) Archive(ctx context.Context, req *pb.ArchiveRequest) (*pb.Arch
 		// since we're going to set a new _current_ archive.
 		ba.Archives.History = append(ba.Archives.History, ba.Archives.Current)
 	}
-	ba.Archives.Current = mdb.Archive{
+	ba.Archives.Current = model.Archive{
 		Cid:       p.Cid().Bytes(),
 		CreatedAt: time.Now().Unix(),
 		JobID:     jid,
@@ -2601,7 +2602,7 @@ func (s *Service) ArchiveInfo(ctx context.Context, req *pb.ArchiveInfoRequest) (
 	}, nil
 }
 
-func toPbArchiveConfig(config *mdb.ArchiveConfig) *pb.ArchiveConfig {
+func toPbArchiveConfig(config *model.ArchiveConfig) *pb.ArchiveConfig {
 	var pbConfig *pb.ArchiveConfig
 	if config != nil {
 		pbConfig = &pb.ArchiveConfig{
@@ -2623,10 +2624,10 @@ func toPbArchiveConfig(config *mdb.ArchiveConfig) *pb.ArchiveConfig {
 	return pbConfig
 }
 
-func fromPbArchiveConfig(pbConfig *pb.ArchiveConfig) *mdb.ArchiveConfig {
-	var config *mdb.ArchiveConfig
+func fromPbArchiveConfig(pbConfig *pb.ArchiveConfig) *model.ArchiveConfig {
+	var config *model.ArchiveConfig
 	if pbConfig != nil {
-		config = &mdb.ArchiveConfig{
+		config = &model.ArchiveConfig{
 			RepFactor:       int(pbConfig.RepFactor),
 			DealMinDuration: pbConfig.DealMinDuration,
 			ExcludedMiners:  pbConfig.ExcludedMiners,
@@ -2638,7 +2639,7 @@ func fromPbArchiveConfig(pbConfig *pb.ArchiveConfig) *mdb.ArchiveConfig {
 			DealStartOffset: pbConfig.DealStartOffset,
 		}
 		if pbConfig.Renew != nil {
-			config.Renew = mdb.ArchiveRenew{
+			config.Renew = model.ArchiveRenew{
 				Enabled:   pbConfig.Renew.Enabled,
 				Threshold: int(pbConfig.Renew.Threshold),
 			}
@@ -2647,7 +2648,7 @@ func fromPbArchiveConfig(pbConfig *pb.ArchiveConfig) *mdb.ArchiveConfig {
 	return config
 }
 
-func toFilConfig(config *mdb.ArchiveConfig) *userPb.FilConfig {
+func toFilConfig(config *model.ArchiveConfig) *userPb.FilConfig {
 	if config == nil {
 		return nil
 	}

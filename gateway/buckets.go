@@ -19,7 +19,7 @@ import (
 	"github.com/textileio/textile/v2/api/bucketsd/client"
 	"github.com/textileio/textile/v2/api/common"
 	"github.com/textileio/textile/v2/buckets"
-	mdb "github.com/textileio/textile/v2/mongodb"
+	"github.com/textileio/textile/v2/collections"
 	tdb "github.com/textileio/textile/v2/threaddb"
 )
 
@@ -137,7 +137,7 @@ type serveBucketFS interface {
 
 type bucketFS struct {
 	client  *client.Client
-	keys    *mdb.IPNSKeys
+	keys    *collections.IPNSKeys
 	session string
 	host    string
 }

@@ -27,6 +27,10 @@ var (
 				Key:      "repo",
 				DefValue: "${HOME}/." + daemonName + "/repo",
 			},
+			"collectionRepo": {
+				Key:      "collection.repo",
+				DefValue: "${HOME}/." + daemonName + "/collection/repo",
+			},
 			"debug": {
 				Key:      "log.debug",
 				DefValue: false,
@@ -107,6 +111,11 @@ func init() {
 		"r",
 		config.Flags["repo"].DefValue.(string),
 		"Path to repository")
+	rootCmd.PersistentFlags().StringP(
+		"collectionRepo",
+		"c",
+		config.Flags["collectionRepo"].DefValue.(string),
+		"Path to collection repository")
 	rootCmd.PersistentFlags().BoolP(
 		"debug",
 		"d",
